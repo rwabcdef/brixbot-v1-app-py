@@ -1,0 +1,945 @@
+{
+  "#comment": "BrixBot demo project: hub (2 leds, button, timer) + app (dial, switch, button, indicator, display, log).",
+  "hardware": "brixbot-uno-r4-v1",
+  "hub": {
+    "globals": [
+      {
+        "#name": "button A press count",
+        "type": "uint16",
+        "value": 0
+      }
+    ],
+    "components": [
+      {
+        "type": "led",
+        "id": "G",
+        "#name": "Led Green (D5)"
+      },
+      {
+        "type": "led",
+        "id": "R",
+        "#name": "Led Red (D4)"
+      },
+      {
+        "type": "button",
+        "id": "A",
+        "#name": "ButtonA (D7)",
+        "args": [
+          {
+            "key": "releaseActive",
+            "value": true
+          },
+          {
+            "key": "longPressThreshold_mS",
+            "value": 0
+          }
+        ],
+        "events": [
+          {
+            "#name": "buttonA press",
+            "eventId": 1,
+            "functions": [
+              {
+                "functionId": "0",
+                "args": [
+                  {
+                    "outArgIndex": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "#name": "buttonA release",
+            "eventId": 2,
+            "functions": [
+              {
+                "functionId": "1",
+                "args": [
+                  {
+                    "outArgIndex": 0
+                  },
+                  {
+                    "outArgIndex": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "timer",
+        "id": "A",
+        "args": [
+          {
+            "key": "timeout_mS",
+            "value": 2000
+          }
+        ],
+        "events": [
+          {
+            "#name": "timerA timeout",
+            "eventId": 1,
+            "functions": [
+              {
+                "functionId": "2",
+                "args": null
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "id": "0",
+        "#name": "buttonA press",
+        "#comment": "green led on, start timer A, count presses, tell the app",
+        "type": "basic",
+        "args": [
+          {
+            "#name": "button id",
+            "type": "char"
+          }
+        ],
+        "operationBlock": [
+          {
+            "type": "command",
+            "componentType": "led",
+            "componentId": "G",
+            "commandId": 1
+          },
+          {
+            "type": "command",
+            "componentType": "timer",
+            "componentId": "A",
+            "commandId": 1
+          },
+          {
+            "type": "statement",
+            "leftVar": {
+              "globalVariableIndex": 0
+            },
+            "operator": "plusequals",
+            "rightFixedVal": {
+              "type": "uint8",
+              "value": 1
+            }
+          },
+          {
+            "type": "message",
+            "protocol": "BUTT0",
+            "schema": 0,
+            "args": [
+              {
+                "argIndex": 0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "1",
+        "#name": "buttonA release",
+        "type": "basic",
+        "args": [
+          {
+            "#name": "button id",
+            "type": "char"
+          },
+          {
+            "#name": "press duration mS",
+            "type": "uint16"
+          }
+        ],
+        "operationBlock": [
+          {
+            "type": "message",
+            "protocol": "BUTT0",
+            "schema": 1,
+            "args": [
+              {
+                "argIndex": 0
+              },
+              {
+                "argIndex": 1
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "#name": "timerA timeout",
+        "#comment": "if button A still held: red flashes once 3+ presses counted, else red on; otherwise both leds off",
+        "type": "conditional",
+        "condVars": [
+          {
+            "#comment": "button A pressed",
+            "type": "command",
+            "componentType": "button",
+            "componentId": "A",
+            "commandId": 1
+          },
+          {
+            "#comment": "press count",
+            "type": "global",
+            "globalVariableIndex": 0
+          }
+        ],
+        "conditionBlock": {
+          "conditionGroups": [
+            {
+              "type": "if",
+              "conditions": [
+                {
+                  "leftVar": {
+                    "condVarIndex": 0
+                  },
+                  "operator": "equal",
+                  "rightFixedVal": {
+                    "type": "bool",
+                    "value": true
+                  }
+                },
+                {
+                  "leftVar": {
+                    "condVarIndex": 1
+                  },
+                  "operator": "greaterthanorequal",
+                  "rightFixedVal": {
+                    "type": "uint16",
+                    "value": 3
+                  }
+                }
+              ],
+              "connectors": [
+                "and"
+              ],
+              "onTrue": [
+                {
+                  "type": "command",
+                  "componentType": "led",
+                  "componentId": "R",
+                  "commandId": 3,
+                  "inArgs": [
+                    {
+                      "fixedVal": 2
+                    },
+                    {
+                      "fixedVal": 2
+                    },
+                    {
+                      "fixedVal": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "elif",
+              "conditions": [
+                {
+                  "leftVar": {
+                    "condVarIndex": 0
+                  },
+                  "operator": "equal",
+                  "rightFixedVal": {
+                    "type": "bool",
+                    "value": true
+                  }
+                }
+              ],
+              "onTrue": [
+                {
+                  "type": "command",
+                  "componentType": "led",
+                  "componentId": "R",
+                  "commandId": 1
+                }
+              ]
+            },
+            {
+              "type": "else",
+              "onTrue": [
+                {
+                  "type": "command",
+                  "componentType": "led",
+                  "componentId": "G",
+                  "commandId": 2
+                },
+                {
+                  "type": "command",
+                  "componentType": "led",
+                  "componentId": "R",
+                  "commandId": 2
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "3",
+        "#name": "set led on/off by id",
+        "#comment": "dynamic component: on uses componentIdArg directly, off resolves the id to a pointer first",
+        "type": "conditional",
+        "args": [
+          {
+            "#name": "led id",
+            "type": "char"
+          },
+          {
+            "#name": "1 = on, 0 = off",
+            "type": "uint8"
+          }
+        ],
+        "tempVars": [
+          {
+            "#name": "led pointer",
+            "type": "component"
+          }
+        ],
+        "conditionBlock": {
+          "conditionGroups": [
+            {
+              "type": "if",
+              "conditions": [
+                {
+                  "leftVar": {
+                    "argIndex": 1
+                  },
+                  "operator": "equal",
+                  "rightFixedVal": {
+                    "type": "uint8",
+                    "value": 1
+                  }
+                }
+              ],
+              "onTrue": [
+                {
+                  "type": "command",
+                  "componentType": "led",
+                  "componentIdArg": 0,
+                  "commandId": 1
+                }
+              ]
+            },
+            {
+              "type": "else",
+              "onTrue": [
+                {
+                  "#comment": "resolve led id -> tempVars[0]",
+                  "type": "command",
+                  "componentType": "led",
+                  "componentIdArg": 0,
+                  "commandId": 0,
+                  "retArg": {
+                    "tempVarIndex": 0
+                  }
+                },
+                {
+                  "type": "command",
+                  "componentType": "led",
+                  "componentPtr": {
+                    "tempVarIndex": 0
+                  },
+                  "commandId": 2
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "4",
+        "#name": "flash led by id",
+        "type": "basic",
+        "args": [
+          {
+            "#name": "led id",
+            "type": "char"
+          },
+          {
+            "#name": "on periods",
+            "type": "uint8"
+          },
+          {
+            "#name": "off periods",
+            "type": "uint8"
+          },
+          {
+            "#name": "num flashes",
+            "type": "uint8"
+          }
+        ],
+        "operationBlock": [
+          {
+            "type": "command",
+            "componentType": "led",
+            "componentIdArg": 0,
+            "commandId": 3,
+            "inArgs": [
+              {
+                "argIndex": 1
+              },
+              {
+                "argIndex": 2
+              },
+              {
+                "argIndex": 3
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "sockets": [
+    {
+      "protocol": "BUTT0",
+      "#comment": "hub -> app button events: <id>P press, <id>R<duration mS:5> release",
+      "commonArgs": [
+        {
+          "#name": "button id",
+          "type": "char"
+        }
+      ],
+      "schemas": [
+        {
+          "#comment": "button press",
+          "constantArgs": [
+            {
+              "type": "char",
+              "value": "P"
+            }
+          ],
+          "args": [],
+          "appFunctions": [
+            {
+              "functionId": 12,
+              "args": [
+                {
+                  "commonArgsIndex": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "#comment": "button release",
+          "constantArgs": [
+            {
+              "type": "char",
+              "value": "R"
+            }
+          ],
+          "args": [
+            {
+              "#name": "press duration mS",
+              "type": "uint16",
+              "minLen": 5,
+              "maxLen": 5
+            }
+          ],
+          "appFunctions": [
+            {
+              "functionId": 15,
+              "args": [
+                {
+                  "commonArgsIndex": 0
+                },
+                {
+                  "argsIndex": 0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "protocol": "LED00",
+      "#comment": "app -> hub led control: <id>1 on, <id>0 off, <id>F<on:3><off:3><num:3> flash",
+      "commonArgs": [
+        {
+          "#name": "led id",
+          "type": "char"
+        }
+      ],
+      "schemas": [
+        {
+          "constantArgs": [
+            {
+              "type": "char",
+              "value": "1"
+            }
+          ],
+          "args": [],
+          "functions": [
+            {
+              "functionId": "3",
+              "args": [
+                {
+                  "commonArgsIndex": 0
+                },
+                {
+                  "fixedVal": {
+                    "type": "uint8",
+                    "value": 1
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "constantArgs": [
+            {
+              "type": "char",
+              "value": "0"
+            }
+          ],
+          "args": [],
+          "functions": [
+            {
+              "functionId": "3",
+              "args": [
+                {
+                  "commonArgsIndex": 0
+                },
+                {
+                  "fixedVal": {
+                    "type": "uint8",
+                    "value": 0
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "constantArgs": [
+            {
+              "type": "char",
+              "value": "F"
+            }
+          ],
+          "args": [
+            {
+              "#name": "on periods",
+              "type": "uint8",
+              "minValue": 1,
+              "maxValue": 40
+            },
+            {
+              "#name": "off periods",
+              "type": "uint8",
+              "minValue": 1,
+              "maxValue": 40
+            },
+            {
+              "#name": "num flashes (0 = forever)",
+              "type": "uint8"
+            }
+          ],
+          "functions": [
+            {
+              "functionId": "4",
+              "args": [
+                {
+                  "commonArgsIndex": 0
+                },
+                {
+                  "argsIndex": 0
+                },
+                {
+                  "argsIndex": 1
+                },
+                {
+                  "argsIndex": 2
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "app": {
+    "globals": [],
+    "components": [
+      {
+        "type": "dial",
+        "id": "A",
+        "#name": "dialA - green flash period",
+        "args": [
+          {
+            "key": "min",
+            "value": 1
+          },
+          {
+            "key": "max",
+            "value": 20
+          },
+          {
+            "key": "value",
+            "value": 4
+          }
+        ],
+        "events": [
+          {
+            "#name": "dialA change",
+            "eventId": 1,
+            "functions": [
+              {
+                "functionId": 10,
+                "args": [
+                  {
+                    "outArgIndex": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "switch",
+        "id": "D",
+        "#name": "Switch direction (red led)",
+        "args": [
+          {
+            "key": "onText",
+            "value": "forward"
+          },
+          {
+            "key": "offText",
+            "value": "reverse"
+          }
+        ],
+        "events": [
+          {
+            "#name": "switch change",
+            "eventId": 1,
+            "functions": [
+              {
+                "functionId": 11,
+                "args": [
+                  {
+                    "outArgIndex": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "button",
+        "id": "G",
+        "#name": "Green on (hold)",
+        "args": [
+          {
+            "key": "text",
+            "value": "Green on"
+          }
+        ],
+        "events": [
+          {
+            "eventId": 1,
+            "functions": [
+              {
+                "functionId": 13
+              }
+            ]
+          },
+          {
+            "eventId": 2,
+            "functions": [
+              {
+                "functionId": 14
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "led",
+        "id": "A",
+        "#name": "hub buttonA",
+        "args": [
+          {
+            "key": "color",
+            "value": "#ffb000"
+          }
+        ]
+      },
+      {
+        "type": "display",
+        "id": "T",
+        "#name": "last press",
+        "args": [
+          {
+            "key": "suffix",
+            "value": " mS"
+          }
+        ]
+      },
+      {
+        "type": "log",
+        "id": "L",
+        "#name": "event log"
+      }
+    ],
+    "functions": [
+      {
+        "id": 10,
+        "#name": "dial -> green flash",
+        "type": "basic",
+        "args": [
+          {
+            "#name": "period",
+            "type": "uint8"
+          }
+        ],
+        "operationBlock": [
+          {
+            "type": "message",
+            "protocol": "LED00",
+            "schema": 2,
+            "args": [
+              {
+                "fixedVal": "G"
+              },
+              {
+                "argIndex": 0
+              },
+              {
+                "argIndex": 0
+              },
+              {
+                "fixedVal": 0
+              }
+            ]
+          },
+          {
+            "type": "command",
+            "componentType": "log",
+            "componentId": "L",
+            "commandId": 1,
+            "inArgs": [
+              {
+                "fixedVal": "flash"
+              },
+              {
+                "argIndex": 0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "#name": "switch -> red led",
+        "type": "conditional",
+        "args": [
+          {
+            "#name": "on",
+            "type": "bool"
+          }
+        ],
+        "conditionBlock": {
+          "conditionGroups": [
+            {
+              "type": "if",
+              "conditions": [
+                {
+                  "leftVar": {
+                    "argIndex": 0
+                  },
+                  "operator": "equal",
+                  "rightFixedVal": {
+                    "type": "bool",
+                    "value": true
+                  }
+                }
+              ],
+              "onTrue": [
+                {
+                  "type": "message",
+                  "protocol": "LED00",
+                  "schema": 0,
+                  "args": [
+                    {
+                      "fixedVal": "R"
+                    }
+                  ]
+                },
+                {
+                  "type": "command",
+                  "componentType": "log",
+                  "componentId": "L",
+                  "commandId": 1,
+                  "inArgs": [
+                    {
+                      "fixedVal": "forward"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "else",
+              "onTrue": [
+                {
+                  "type": "message",
+                  "protocol": "LED00",
+                  "schema": 1,
+                  "args": [
+                    {
+                      "fixedVal": "R"
+                    }
+                  ]
+                },
+                {
+                  "type": "command",
+                  "componentType": "log",
+                  "componentId": "L",
+                  "commandId": 1,
+                  "inArgs": [
+                    {
+                      "fixedVal": "reverse"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 12,
+        "#name": "buttonA press",
+        "type": "basic",
+        "args": [
+          {
+            "#name": "button id",
+            "type": "char"
+          }
+        ],
+        "operationBlock": [
+          {
+            "type": "command",
+            "componentType": "led",
+            "componentId": "A",
+            "commandId": 1
+          },
+          {
+            "type": "command",
+            "componentType": "log",
+            "componentId": "L",
+            "commandId": 1,
+            "inArgs": [
+              {
+                "fixedVal": "press"
+              },
+              {
+                "argIndex": 0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "#name": "green on",
+        "type": "basic",
+        "operationBlock": [
+          {
+            "type": "message",
+            "protocol": "LED00",
+            "schema": 0,
+            "args": [
+              {
+                "fixedVal": "G"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "#name": "green off",
+        "type": "basic",
+        "operationBlock": [
+          {
+            "type": "message",
+            "protocol": "LED00",
+            "schema": 1,
+            "args": [
+              {
+                "fixedVal": "G"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "#name": "event log update",
+        "type": "basic",
+        "args": [
+          {
+            "#name": "button id",
+            "type": "char"
+          },
+          {
+            "#name": "duration mS",
+            "type": "uint16"
+          }
+        ],
+        "operationBlock": [
+          {
+            "type": "command",
+            "componentType": "led",
+            "componentId": "A",
+            "commandId": 2
+          },
+          {
+            "type": "command",
+            "componentType": "display",
+            "componentId": "T",
+            "commandId": 1,
+            "inArgs": [
+              {
+                "argIndex": 1
+              }
+            ]
+          },
+          {
+            "type": "command",
+            "componentType": "log",
+            "componentId": "L",
+            "commandId": 1,
+            "inArgs": [
+              {
+                "fixedVal": "release"
+              },
+              {
+                "argIndex": 0
+              },
+              {
+                "argIndex": 1
+              },
+              {
+                "fixedVal": "mS"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
