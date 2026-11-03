@@ -13,16 +13,19 @@
       {
         "type": "led",
         "id": "G",
+        "hwSlot": 0,
         "#name": "Led Green (D5)"
       },
       {
         "type": "led",
         "id": "R",
+        "hwSlot": 1,
         "#name": "Led Red (D4)"
       },
       {
         "type": "button",
         "id": "A",
+        "hwSlot": 0,
         "#name": "ButtonA (D7)",
         "args": [
           {
@@ -71,6 +74,7 @@
       {
         "type": "timer",
         "id": "A",
+        "hwSlot": 0,
         "args": [
           {
             "key": "timeout_mS",

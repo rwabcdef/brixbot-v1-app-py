@@ -1,0 +1,10 @@
+{
+  "#comment": "Components physically available on the hub. Mirrors ../hub/brixbot_hub/Brix_HwConfig.cpp: the firmware gives each type's slots out in this order, one per component as it is declared.",
+  "id": "brixbot-uno-r4-v1",
+  "name": "BrixBot hub v1 (Arduino UNO R4)",
+  "components": [
+    {"type": "led", "slots": [{"pin": "D5"}, {"pin": "D4"}, {"pin": "D3"}, {"pin": "D2"}]},
+    {"type": "button", "slots": [{"pin": "D7"}, {"pin": "D6"}, {"pin": "D8"}]},
+    {"type": "timer", "slots": [{}, {}, {}, {}]}
+  ]
+}

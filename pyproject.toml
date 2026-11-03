@@ -18,5 +18,8 @@ brixbot = "brixbot_app.__main__:main"
 [tool.setuptools.packages.find]
 include = ["brixbot_app*"]
 
+[tool.setuptools.package-data]
+"brixbot_app.hardware" = ["*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

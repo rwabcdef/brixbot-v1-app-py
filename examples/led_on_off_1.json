@@ -1,0 +1,207 @@
+{
+  "hardware": "brixbot-uno-r4-v1",
+  "hub": {
+    "components": [
+      {
+        "type": "led",
+        "id": "A",
+        "#name": "led A"
+      }
+    ],
+    "functions": [
+      {
+        "id": "0",
+        "#name": "led on",
+        "type": "basic",
+        "operationBlock": [
+          {
+            "type": "command",
+            "componentType": "led",
+            "commandId": 1,
+            "componentId": "A"
+          }
+        ],
+        "args": [
+          {
+            "#name": "led id",
+            "type": "char"
+          }
+        ]
+      },
+      {
+        "id": "1",
+        "#name": "led off",
+        "type": "basic",
+        "operationBlock": [
+          {
+            "type": "command",
+            "componentType": "led",
+            "commandId": 2,
+            "componentId": "A"
+          }
+        ],
+        "args": [
+          {
+            "#name": "led id",
+            "type": "char"
+          }
+        ]
+      }
+    ]
+  },
+  "sockets": [
+    {
+      "protocol": "LEDS0",
+      "commonArgs": [
+        {
+          "#name": "led id",
+          "type": "char"
+        }
+      ],
+      "schemas": [
+        {
+          "constantArgs": [
+            {
+              "type": "char",
+              "value": "1"
+            }
+          ],
+          "args": [],
+          "#comment": "led on",
+          "functions": [
+            {
+              "functionId": "0",
+              "args": [
+                {
+                  "commonArgsIndex": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "constantArgs": [
+            {
+              "type": "char",
+              "value": "0"
+            }
+          ],
+          "args": [],
+          "#comment": "led off",
+          "functions": [
+            {
+              "functionId": "1",
+              "args": [
+                {
+                  "commonArgsIndex": 0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "app": {
+    "components": [
+      {
+        "type": "button",
+        "id": "A",
+        "#name": "button A",
+        "events": [
+          {
+            "eventId": 1,
+            "functions": [
+              {
+                "functionId": "0",
+                "args": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "button",
+        "id": "B",
+        "#name": "button B",
+        "events": [
+          {
+            "eventId": 1,
+            "functions": [
+              {
+                "functionId": "1",
+                "args": null
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "id": "0",
+        "#name": "set led A on",
+        "type": "basic",
+        "operationBlock": [
+          {
+            "type": "statement",
+            "leftVar": {
+              "tempVarIndex": 0
+            },
+            "operator": "equals",
+            "rightFixedVal": "A"
+          },
+          {
+            "type": "message",
+            "protocol": "LEDS0",
+            "schema": 0,
+            "args": [
+              {
+                "tempVarIndex": 0
+              }
+            ]
+          }
+        ],
+        "args": [],
+        "tempVars": [
+          {
+            "#name": "id",
+            "type": "char"
+          }
+        ]
+      },
+      {
+        "id": "1",
+        "#name": "set led A off",
+        "type": "basic",
+        "operationBlock": [
+          {
+            "type": "statement",
+            "leftVar": {
+              "tempVarIndex": 0
+            },
+            "operator": "equals",
+            "rightFixedVal": "A"
+          },
+          {
+            "type": "message",
+            "protocol": "LEDS0",
+            "schema": 1,
+            "args": [
+              {
+                "tempVarIndex": 0
+              }
+            ]
+          }
+        ],
+        "args": [],
+        "tempVars": [
+          {
+            "#name": "id",
+            "type": "char"
+          }
+        ]
+      }
+    ]
+  }
+}

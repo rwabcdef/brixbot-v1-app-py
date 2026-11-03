@@ -22,6 +22,8 @@ class CommandSpec:
     num_out: int = 0
     ret_type: int = NONE
     in_names: tuple[str, ...] = ()
+    # in-arg types, where known (app components; the hub firmware does not declare them)
+    in_types: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -95,14 +97,14 @@ HUB_LIMITS = {
 APP_SPECS: dict[str, ComponentSpec] = {
     "dial": ComponentSpec(
         "dial",
-        (CommandSpec(1, "setValue", 1, in_names=("value",)),
+        (CommandSpec(1, "setValue", 1, in_names=("value",), in_types=(UINT8,)),
          CommandSpec(2, "getValue", ret_type=UINT8)),
         (EventSpec(1, "change", (CHAR, UINT8), ("id", "value")),),
         ("min", "max", "value"),
     ),
     "switch": ComponentSpec(
         "switch",
-        (CommandSpec(1, "set", 1, in_names=("on",)),
+        (CommandSpec(1, "set", 1, in_names=("on",), in_types=(BOOL,)),
          CommandSpec(2, "get", ret_type=BOOL)),
         (EventSpec(1, "change", (CHAR, BOOL), ("id", "on")),),
         ("value", "onText", "offText"),

@@ -1,0 +1,182 @@
+{
+  "hardware": "brixbot-uno-r4-v1",
+  "hub": {
+    "components": [
+      {
+        "type": "led",
+        "id": "A",
+        "#name": "led A (D5)",
+        "hwSlot": 0
+      }
+    ],
+    "functions": [
+      {
+        "id": "0",
+        "#name": "led A (D5) on",
+        "#control": true,
+        "type": "basic",
+        "operationBlock": [
+          {
+            "type": "command",
+            "componentType": "led",
+            "componentId": "A",
+            "commandId": 1
+          }
+        ]
+      },
+      {
+        "id": "1",
+        "#name": "led A (D5) off",
+        "#control": true,
+        "type": "basic",
+        "operationBlock": [
+          {
+            "type": "command",
+            "componentType": "led",
+            "componentId": "A",
+            "commandId": 2
+          }
+        ]
+      }
+    ]
+  },
+  "sockets": [
+    {
+      "protocol": "LEDS0",
+      "commonArgs": [
+        {
+          "#name": "led id",
+          "type": "char"
+        }
+      ],
+      "schemas": [
+        {
+          "constantArgs": [
+            {
+              "type": "char",
+              "value": "1"
+            }
+          ],
+          "args": [],
+          "#comment": "On",
+          "functions": [
+            {
+              "functionId": "0",
+              "args": null
+            }
+          ]
+        },
+        {
+          "constantArgs": [
+            {
+              "type": "char",
+              "value": "0"
+            }
+          ],
+          "args": [],
+          "#comment": "Off",
+          "functions": [
+            {
+              "functionId": "1",
+              "args": null
+            }
+          ]
+        }
+      ],
+      "#name": "all leds"
+    }
+  ],
+  "app": {
+    "components": [
+      {
+        "type": "switch",
+        "id": "A",
+        "#name": "switch A",
+        "events": [
+          {
+            "eventId": 1,
+            "functions": [
+              {
+                "functionId": "0",
+                "args": [
+                  {
+                    "fixedVal": {
+                      "type": "char",
+                      "value": "0"
+                    }
+                  },
+                  {
+                    "outArgIndex": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "id": "0",
+        "#name": "switch A change",
+        "type": "conditional",
+        "args": [
+          {
+            "#name": "id",
+            "type": "char"
+          },
+          {
+            "#name": "on",
+            "type": "bool"
+          }
+        ],
+        "conditionBlock": {
+          "conditionGroups": [
+            {
+              "type": "if",
+              "conditions": [
+                {
+                  "operator": "equal",
+                  "rightFixedVal": {
+                    "type": "bool",
+                    "value": true
+                  },
+                  "leftVar": {
+                    "argIndex": 1
+                  }
+                }
+              ],
+              "onTrue": [
+                {
+                  "type": "message",
+                  "protocol": "LEDS0",
+                  "schema": 0,
+                  "args": [
+                    {
+                      "argIndex": 0
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "else",
+              "onTrue": [
+                {
+                  "type": "message",
+                  "protocol": "LEDS0",
+                  "schema": 1,
+                  "args": [
+                    {
+                      "argIndex": 0
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,32 +1,94 @@
 """The coloured cards of the Hub / Link / App columns (as in the concept sketch):
-components blue, sockets purple, event handlers yellow, functions green.
+components blue, sockets purple, event handlers yellow, functions green,
+globals grey.
+
+Cards and rows can carry an item path (e.g. ("hub", "functions", 2)): a
+click selects that item for editing and a right click opens its context
+menu, through the callbacks the window sets on the column. A card or row
+can be marked selected, or marked with a verify error.
+
+A card can hold inset sections in another kind's colour: a component card
+shows its event handlers and control connections in a yellow inset, so they
+sit inside the component they belong to.
 """
 
 from __future__ import annotations
 
+from typing import Callable
+
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMenu, QToolButton, QVBoxLayout, QWidget
 
 COLORS = {
     "component": ("#dae8fc", "#6c8ebf"),
     "socket": ("#e1d5e7", "#9673a6"),
     "handler": ("#fff2cc", "#d6b656"),
     "function": ("#d5e8d4", "#82b366"),
+    "global": ("#f0f0f0", "#999999"),
 }
+SELECT_COLOR = "#1a5fd0"
+ERROR_COLOR = "#d03030"
+
+Click = Callable[[tuple], None]
 
 
-class Card(QFrame):
-    def __init__(self, title: str, kind: str, rows: list[str] | None = None, tooltip: str = ""):
+class _Clickable:
+    """Mixin: path + click / context menu callbacks."""
+    path: tuple | None = None
+    on_click: Click | None = None
+    on_menu: Callable[[tuple, object], None] | None = None
+
+    def _press(self, event) -> bool:
+        if self.path is None:
+            return False
+        if event.button() == Qt.MouseButton.LeftButton and self.on_click:
+            self.on_click(self.path)
+            return True
+        if event.button() == Qt.MouseButton.RightButton and self.on_menu:
+            self.on_menu(self.path, event.globalPosition().toPoint())
+            return True
+        return False
+
+
+class Row(QLabel, _Clickable):
+    def __init__(self, text: str, border: str, rich: bool = False, path: tuple | None = None):
+        super().__init__(text)
+        self.path = path
+        self._border = border
+        self.setTextFormat(Qt.TextFormat.RichText if rich else Qt.TextFormat.PlainText)
+        self.setObjectName("row")
+        self.setWordWrap(True)
+        if path is None:
+            self.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        else:
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.set_state(False, "")
+
+    def set_state(self, selected: bool, error: str) -> None:
+        bg = "background: rgba(26, 95, 208, 0.16);" if selected else ""
+        left = f"border-left: 4px solid {ERROR_COLOR};" if error else ""
+        self.setStyleSheet(f"QLabel#row {{ border-top: 1px solid {self._border}; padding: 3px 6px; {bg} {left} }}")
+        if error:
+            self.setToolTip(error)
+
+    def mousePressEvent(self, e):      # noqa: N802 (Qt name)
+        if not self._press(e):
+            super().mousePressEvent(e)
+
+
+class Card(QFrame, _Clickable):
+    def __init__(self, title: str, kind: str, rows: list[str] | None = None, tooltip: str = "",
+                 path: tuple | None = None):
         super().__init__()
-        bg, border = COLORS[kind]
+        self.kind = kind
+        self.path = path
+        self._bg, self._border = COLORS[kind]
         self.setObjectName("card")
-        self.setStyleSheet(
-            f"#card {{ background: {bg}; border: 1px solid {border}; }}"
-            f"#card QLabel {{ color: #111; background: transparent; }}"
-            f"#card QLabel#row {{ border-top: 1px solid {border}; padding: 3px 6px; }}"
-        )
+        self._tooltip = tooltip
         if tooltip:
             self.setToolTip(tooltip)
+        if path is not None:
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
@@ -36,30 +98,88 @@ class Card(QFrame):
         t.setWordWrap(True)
         lay.addWidget(t)
         self._lay = lay
+        self.rows: list[Row] = []
+        self.set_state(False, "")
         for r in rows or []:
             self.add_row(r)
 
-    def add_row(self, text: str, rich: bool = False) -> QLabel:
-        """A text row; rich=True renders text as HTML (caller escapes it)."""
-        lbl = QLabel(text)
-        lbl.setTextFormat(Qt.TextFormat.RichText if rich else Qt.TextFormat.PlainText)
-        lbl.setObjectName("row")
-        lbl.setWordWrap(True)
-        lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        self._lay.addWidget(lbl)
-        return lbl
+    def set_state(self, selected: bool, error: str) -> None:
+        color = SELECT_COLOR if selected else (ERROR_COLOR if error else self._border)
+        width = 2 if (selected or error) else 1
+        self.setStyleSheet(
+            f"#card {{ background: {self._bg}; border: {width}px solid {color}; }}"
+            f"#card QLabel {{ color: #111; background: transparent; }}"
+        )
+        tip = "\n\n".join(x for x in (error, self._tooltip) if x)
+        self.setToolTip(tip)
+
+    def add_row(self, text: str, rich: bool = False, path: tuple | None = None, tooltip: str = "") -> Row:
+        """A text row; rich=True renders text as HTML (caller escapes it). A row with a
+        path is clickable on its own."""
+        row = Row(text, self._border, rich, path)
+        if tooltip:
+            row.setToolTip(tooltip)
+        row.on_click, row.on_menu = self.on_click, self.on_menu
+        self._lay.addWidget(row)
+        self.rows.append(row)
+        return row
+
+    def add_section(self, kind: str, title: str) -> Section:
+        """An inset box in another kind's colour (e.g. the handlers of a component)."""
+        sec = Section(self, kind, title)
+        holder = QWidget()
+        hl = QVBoxLayout(holder)
+        hl.setContentsMargins(10, 2, 10, 8)
+        hl.addWidget(sec)
+        self._lay.addWidget(holder)
+        return sec
 
     def add_widget(self, w: QWidget) -> None:
         holder = QFrame()
         holder.setObjectName("row")
+        holder.setStyleSheet(f"QFrame#row {{ border-top: 1px solid {self._border}; }}")
         hl = QVBoxLayout(holder)
         hl.setContentsMargins(6, 4, 6, 6)
         hl.addWidget(w)
         self._lay.addWidget(holder)
 
+    def mousePressEvent(self, e):      # noqa: N802 (Qt name)
+        if not self._press(e):
+            super().mousePressEvent(e)
+
+
+class Section(QFrame):
+    """An inset box inside a card; its rows count as the card's rows."""
+
+    def __init__(self, card: Card, kind: str, title: str):
+        super().__init__()
+        self.card = card
+        self.kind = kind
+        bg, self._border = COLORS[kind]
+        self.setObjectName("section")
+        self.setStyleSheet(f"QFrame#section {{ background: {bg}; border: 1px solid {self._border}; "
+                           f"border-radius: 6px; }}")
+        self._lay = QVBoxLayout(self)
+        self._lay.setContentsMargins(0, 0, 0, 0)
+        self._lay.setSpacing(0)
+        t = QLabel(title)
+        t.setStyleSheet("font-weight: 600; padding: 2px 6px; font-size: 9pt;")
+        self._lay.addWidget(t)
+        self.rows: list[Row] = []
+
+    def add_row(self, text: str, path: tuple | None = None, tooltip: str = "") -> Row:
+        row = Row(text, self._border, False, path)
+        if tooltip:
+            row.setToolTip(tooltip)
+        row.on_click, row.on_menu = self.card.on_click, self.card.on_menu
+        self._lay.addWidget(row)
+        self.rows.append(row)
+        self.card.rows.append(row)
+        return row
+
 
 class Column(QFrame):
-    """A titled, rounded column holding cards."""
+    """A titled, rounded column holding cards, with an optional + (add) menu."""
 
     def __init__(self, title: str):
         super().__init__()
@@ -68,21 +188,58 @@ class Column(QFrame):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(14, 8, 14, 14)
         lay.setSpacing(12)
+        head = QWidget()
+        hl = QHBoxLayout(head)
+        hl.setContentsMargins(0, 0, 0, 0)
         t = QLabel(title)
         t.setAlignment(Qt.AlignmentFlag.AlignCenter)
         t.setStyleSheet("font-weight: 600;")
-        lay.addWidget(t)
+        self.add_btn = QToolButton()
+        self.add_btn.setText("+ Add")
+        self.add_btn.setToolTip(f"Add to {title}")
+        self.add_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.add_menu = QMenu(self.add_btn)
+        self.add_btn.setMenu(self.add_menu)
+        self.view_btn = QToolButton()
+        self.view_btn.setText("View")
+        self.view_btn.setToolTip(f"View {title}")
+        self.view_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.view_menu = QMenu(self.view_btn)
+        self.view_btn.setMenu(self.view_menu)
+        self.view_btn.setVisible(False)          # shown once its menu has entries (show_view)
+        hl.addWidget(self.view_btn)
+        hl.addWidget(t, 1)
+        hl.addWidget(self.add_btn)
+        lay.addWidget(head)
         self._lay = lay
-        self._end = None
+        self.on_click: Click | None = None
+        self.on_menu = None
+        self.items: list[_Clickable] = []
+
+    def show_view(self) -> None:
+        self.view_btn.setVisible(not self.view_menu.isEmpty())
 
     def clear(self) -> None:
         while self._lay.count() > 1:
             item = self._lay.takeAt(1)
             if item.widget():
+                item.widget().hide()            # deleteLater runs later; don't paint it meanwhile
                 item.widget().deleteLater()
+        self.items = []
 
     def add(self, w: QWidget) -> None:
+        if isinstance(w, Card):
+            w.on_click, w.on_menu = self.on_click, self.on_menu
+            for r in w.rows:
+                r.on_click, r.on_menu = self.on_click, self.on_menu
+            self.items.append(w)
+            self.items += [r for r in w.rows if r.path is not None]
         self._lay.addWidget(w)
 
     def finish(self) -> None:
         self._lay.addStretch(1)
+
+    def mark(self, selected: tuple | None, errors: dict[tuple, str]) -> None:
+        for it in self.items:
+            if it.path is not None:
+                it.set_state(it.path == selected, errors.get(it.path, ""))
