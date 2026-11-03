@@ -5,36 +5,52 @@
       {
         "type": "led",
         "id": "A",
-        "#name": "led A (D5)",
+        "#name": "led Green",
         "hwSlot": 0
+      },
+      {
+        "type": "led",
+        "id": "B",
+        "#name": "led Blue",
+        "hwSlot": 1
       }
     ],
     "functions": [
       {
         "id": "0",
-        "#name": "led A (D5) on",
-        "#control": true,
+        "#name": "Led on",
         "type": "basic",
         "operationBlock": [
           {
             "type": "command",
             "componentType": "led",
-            "componentId": "A",
-            "commandId": 1
+            "commandId": 1,
+            "componentIdArg": 0
+          }
+        ],
+        "args": [
+          {
+            "#name": "led id",
+            "type": "char"
           }
         ]
       },
       {
         "id": "1",
-        "#name": "led A (D5) off",
-        "#control": true,
+        "#name": "led off",
         "type": "basic",
         "operationBlock": [
           {
             "type": "command",
             "componentType": "led",
-            "componentId": "A",
-            "commandId": 2
+            "commandId": 2,
+            "componentIdArg": 0
+          }
+        ],
+        "args": [
+          {
+            "#name": "led id",
+            "type": "char"
           }
         ]
       }
@@ -53,16 +69,20 @@
         {
           "constantArgs": [
             {
-              "type": "char",
+              "type": "str10",
               "value": "1"
             }
           ],
           "args": [],
-          "#comment": "On",
+          "#name": "On",
           "functions": [
             {
               "functionId": "0",
-              "args": null
+              "args": [
+                {
+                  "commonArgsIndex": 0
+                }
+              ]
             }
           ]
         },
@@ -74,16 +94,20 @@
             }
           ],
           "args": [],
-          "#comment": "Off",
+          "#name": "Off",
           "functions": [
             {
               "functionId": "1",
-              "args": null
+              "args": [
+                {
+                  "commonArgsIndex": 0
+                }
+              ]
             }
           ]
         }
       ],
-      "#name": "all leds"
+      "#name": "Leds0"
     }
   ],
   "app": {
@@ -100,10 +124,7 @@
                 "functionId": "0",
                 "args": [
                   {
-                    "fixedVal": {
-                      "type": "char",
-                      "value": "0"
-                    }
+                    "outArgIndex": 0
                   },
                   {
                     "outArgIndex": 1
@@ -111,6 +132,20 @@
                 ]
               }
             ]
+          }
+        ],
+        "args": [
+          {
+            "key": "value",
+            "value": 0
+          },
+          {
+            "key": "onText",
+            "value": "off"
+          },
+          {
+            "key": "offText",
+            "value": "on"
           }
         ]
       }

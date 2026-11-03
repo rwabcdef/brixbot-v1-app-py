@@ -412,7 +412,7 @@
       ],
       "schemas": [
         {
-          "#comment": "button press",
+          "#name": "button press",
           "constantArgs": [
             {
               "type": "char",
@@ -432,7 +432,7 @@
           ]
         },
         {
-          "#comment": "button release",
+          "#name": "button release",
           "constantArgs": [
             {
               "type": "char",
@@ -474,6 +474,7 @@
       ],
       "schemas": [
         {
+          "#name": "led on",
           "constantArgs": [
             {
               "type": "char",
@@ -499,6 +500,7 @@
           ]
         },
         {
+          "#name": "led off",
           "constantArgs": [
             {
               "type": "char",
@@ -524,6 +526,7 @@
           ]
         },
         {
+          "#name": "led flash",
           "constantArgs": [
             {
               "type": "char",

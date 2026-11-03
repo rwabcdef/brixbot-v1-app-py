@@ -161,7 +161,7 @@ def connect(data: dict, side: str, comp: dict, cmd: CommandSpec,
     schemas = s.setdefault("schemas", [])
     if schema is None:
         const = new_constant(schemas, cmd)
-        schemas.append({"#comment": f"{_comp_name(comp)} {cmd.name}",
+        schemas.append({"#name": f"{_comp_name(comp)} {cmd.name}",
                         "constantArgs": [{"type": "char", "value": const}],
                         "args": [{"#name": nm, "type": arg_type(nm, cmd, i)} for i, nm in enumerate(names)]})
         schema = len(schemas) - 1

@@ -135,6 +135,7 @@ def test_build_a_project_from_new(win, qapp):
     # bind the socket schema to the hub function, state from common arg 0
     win.select(("sockets", 0))
     sch = win.panel.editor.schemas.widgets()[0]
+    sch.name.setText("led state")
     sch.hub_fns.add_item({"functionId": "0", "args": [{"commonArgsIndex": 0}]})
     win.panel.apply()
 
@@ -232,3 +233,36 @@ def test_new_handler_function_for_event(win):
     assert win.verify_result.ok, win.verify_result.errors
     win.action_undo()
     assert win.doc.data["app"]["functions"] == []
+
+
+def test_dashboard_on_run_and_toggle(win, qapp):
+    n_app = len(win.doc.data["app"]["components"])
+    dial = win.app_program.resolve("dial", "A")
+    base = len(dial._observers)
+
+    win.chk_dashboard.setChecked(True)
+    assert not win.btn_view.isEnabled()
+    win.action_run()
+    assert win.dashboard_shown
+    assert len(win.dashboard.cards) == n_app
+    assert win.btn_view.isEnabled() and win.btn_view.text() == "Editor view"
+    assert len(dial._observers) == base + 1
+
+    # a dashboard control drives the model
+    sw = win.app_program.resolve("switch", "D")
+    view = next(v for v in win.dashboard.views if v.model is sw)
+    assert view.isEnabled()
+
+    win.btn_view.click()                       # back to the editor view while running
+    assert not win.dashboard_shown and len(dial._observers) == base
+    win.btn_view.click()
+    assert win.dashboard_shown
+
+    win.action_stop()
+    assert not win.dashboard_shown and not win.btn_view.isEnabled()
+    assert len(dial._observers) == base
+
+    win.chk_dashboard.setChecked(False)
+    win.action_run()
+    assert not win.dashboard_shown
+    win.action_stop()

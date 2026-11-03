@@ -25,6 +25,35 @@ def now_ms() -> int:
     return int(time.monotonic() * 1000)
 
 
+_TRUE = ("true", "on", "1", "yes")
+_FALSE = ("false", "off", "0", "no", "")
+
+
+def bool_arg(c, key: str, default: bool) -> bool:
+    """A true / false setting. Accepts JSON true / false, 1 / 0 and the words
+    true / false, on / off, yes / no; anything else is a config error (a plain
+    bool() would read the text "off" as true)."""
+    v = c.init_arg(key, default)
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, (int, float)) and v in (0, 1):
+        return bool(v)
+    if isinstance(v, str) and v.strip().lower() in _TRUE + _FALSE:
+        return v.strip().lower() in _TRUE
+    raise E.BuildError(E.BAD_VALUE, f"{key} {v!r}: use true or false")
+
+
+def int_arg(c, key: str, default: int) -> int:
+    v = c.init_arg(key, default)
+    try:
+        if isinstance(v, bool):
+            raise ValueError
+        if isinstance(v, float) and not v.is_integer():
+            raise ValueError
+        return int(v)
+    except (TypeError, ValueError):
+        raise E.BuildError(E.BAD_VALUE, f"{key} {v!r}: use a whole number") from None
+
 class AppComponent(Component):
     def __init__(self, spec: ComponentSpec, cid: str, cfg: dict):
         super().__init__(spec, cid, cfg)
@@ -32,6 +61,10 @@ class AppComponent(Component):
 
     def add_observer(self, fn: Callable[[], None]) -> None:
         self._observers.append(fn)
+
+    def remove_observer(self, fn: Callable[[], None]) -> None:
+        if fn in self._observers:
+            self._observers.remove(fn)
 
     def notify(self) -> None:
         for fn in list(self._observers):
@@ -41,9 +74,9 @@ class AppComponent(Component):
 class DialModel(AppComponent):
     def __init__(self, spec, cid, cfg):
         super().__init__(spec, cid, cfg)
-        self.min = int(self.init_arg("min", 0))
-        self.max = int(self.init_arg("max", 100))
-        self.value = max(self.min, min(self.max, int(self.init_arg("value", self.min))))
+        self.min = int_arg(self, "min", 0)
+        self.max = int_arg(self, "max", 100)
+        self.value = max(self.min, min(self.max, int_arg(self, "value", self.min)))
 
     def execute(self, cmd: Command) -> int:
         if cmd.command_id == 1:
@@ -64,7 +97,7 @@ class DialModel(AppComponent):
 class SwitchModel(AppComponent):
     def __init__(self, spec, cid, cfg):
         super().__init__(spec, cid, cfg)
-        self.on = bool(self.init_arg("value", False))
+        self.on = bool_arg(self, "value", False)
         self.on_text = str(self.init_arg("onText", "on"))
         self.off_text = str(self.init_arg("offText", "off"))
 
@@ -211,9 +244,9 @@ class LogModel(AppComponent):
 class TimerModel(AppComponent):
     def __init__(self, spec, cid, cfg):
         super().__init__(spec, cid, cfg)
-        self.timeout_ms = int(self.init_arg("timeout_mS", 1000))
-        self.repeat = bool(self.init_arg("repeat", False))
-        self.auto_start = bool(self.init_arg("autoStart", False))
+        self.timeout_ms = int_arg(self, "timeout_mS", 1000)
+        self.repeat = bool_arg(self, "repeat", False)
+        self.auto_start = bool_arg(self, "autoStart", False)
         self.active = False
         self._due = 0
 

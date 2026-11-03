@@ -20,6 +20,7 @@ python -m venv .venv
 | **Generate** | show the minified hub config string (copy / save) |
 | **Load** | send the hub config to the hub (`CONFG` B / D… / E) and report the build result |
 | **Run / Stop** | start / stop the app side and the hub |
+| **go to dashboard** | when ticked, Run shows a dashboard of only the app's components in place of the columns (the editor dock hides); **Dashboard / Editor view** switches between them while running, and Stop returns to the editor view |
 
 ### Editing a project
 
@@ -42,6 +43,8 @@ python -m venv .venv
   match the event's values (e.g. switch change: `id:char, on:bool`), binds it to the event, and opens it.
 * Each component card shows its event handlers and control connections in a yellow **Handlers** inset.
   Socket messages bound to other functions are listed under **Socket handlers**.
+* Every socket schema needs a **Name**: it labels the message on the Link card and in message and
+  binding choices. In older files, a schema's comment becomes its name when the file is opened.
 * A function binding's **Its args** is either *set each arg* or *no args transferred* (`"args": null`:
   the function runs with the arg values it already has).
 * Renaming a function id, a component's type / id or a socket's protocol updates everything that

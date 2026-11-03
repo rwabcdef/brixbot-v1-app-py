@@ -52,6 +52,30 @@ def strip_for_hub(o):
     return o
 
 
+def migrate(data: dict) -> None:
+    """Bring an older project file up to date (in place). Schemas are now named by
+    "#name" (required); an older file's schema "#comment" becomes its name."""
+    for s in data.get("sockets") or []:
+        if not isinstance(s, dict):
+            continue
+        for sc in s.get("schemas") or []:
+            if isinstance(sc, dict) and not sc.get("#name") and isinstance(sc.get("#comment"), str):
+                sc["#name"] = sc.pop("#comment")
+
+
+def schema_name_errors(sockets: list) -> list[E.BuildError]:
+    """Every schema needs a "#name" (app rule: it labels the message in the editor)."""
+    out = []
+    for i, s in enumerate(sockets):
+        if not isinstance(s, dict):
+            continue
+        for j, sc in enumerate(s.get("schemas") or []):
+            if isinstance(sc, dict) and not str(sc.get("#name") or "").strip():
+                out.append(E.BuildError(E.MISSING_FIELD, f"{s.get('protocol')} schema {j} needs a name",
+                                        E.SECTION_SOCKETS, i))
+    return out
+
+
 @dataclass
 class VerifyResult:
     errors: list[str] = field(default_factory=list)
@@ -79,6 +103,7 @@ class Project:
             data = json.load(f)
         if not isinstance(data, dict):
             raise ValueError("project file must hold a JSON object")
+        migrate(data)
         return cls(data, p)
 
     def save(self, path: str | Path | None = None) -> None:
@@ -143,6 +168,9 @@ class Project:
         res = VerifyResult()
         if self.hardware not in HARDWARE_TYPES:
             res.errors.append(f"unknown hardware {self.hardware!r}")
+        for exc in schema_name_errors(self.sockets):
+            res.errors.append(exc.describe())
+            res.issues.append((SIDE_HUB, exc))
         comps = self.hub.get("components")
         for i, detail in slot_errors(load_hardware(self.hardware), comps if isinstance(comps, list) else []):
             exc = E.BuildError(E.NO_HW_SLOT, detail, E.SECTION_COMPONENTS, i)

@@ -71,6 +71,9 @@ def test_templates_pick_free_ids_and_verify():
     data["hub"]["functions"].append(templates.new_function("conditional", data["hub"]["functions"]))
     data["sockets"].append(templates.new_socket([]))
     res = Project(data).verify()
+    assert [e.detail for _, e in res.issues] == ["SOCKA schema 0 needs a name"]    # the one thing to fill in
+    data["sockets"][0]["schemas"][0]["#name"] = "message"
+    res = Project(data).verify()
     assert res.ok, res.errors
 
 
@@ -116,3 +119,37 @@ def test_function_text():
     text = refs.function_text(d["hub"]["functions"][0], "hub", d["hub"]["globals"])
     assert "button A press count += 1" in text
     assert "send BUTT0[0](button id)" in text
+
+
+def test_schema_name_required_and_migrated(tmp_path):
+    import json
+    from brixbot_app.engine.project import migrate
+    old = {"hardware": "brixbot-uno-r4-v1", "hub": {}, "app": {}, "sockets": [{"protocol": "SOCKA", "schemas": [
+        {"#comment": "led on", "constantArgs": [{"type": "char", "value": "1"}]},
+        {"#name": "led off", "#comment": "notes", "constantArgs": [{"type": "char", "value": "0"}]},
+        {"constantArgs": [{"type": "char", "value": "F"}]}]}]}
+    f = tmp_path / "old.json"
+    f.write_text(json.dumps(old), encoding="utf-8")
+    p = Project.load(f)
+    sc = p.data["sockets"][0]["schemas"]
+    assert sc[0] == {"#name": "led on", "constantArgs": [{"type": "char", "value": "1"}]}
+    assert sc[1]["#name"] == "led off" and sc[1]["#comment"] == "notes"
+    res = p.verify()
+    assert [(e.section, e.index, e.detail) for _, e in res.issues] == [("S", 0, "SOCKA schema 2 needs a name")]
+    sc[2]["#name"] = "led flash"
+    assert p.verify().ok
+    migrate(p.data)                                    # idempotent
+    assert sc[0]["#name"] == "led on"
+
+
+def test_app_bool_and_int_settings_are_parsed_strictly():
+    def build(args, ctype="switch"):
+        return Project({"hardware": "brixbot-uno-r4-v1", "hub": {}, "sockets": [],
+                        "app": {"components": [{"type": ctype, "id": "A", "args": args}]}}).verify()
+    for v, on in (("off", False), ("on", True), ("False", False), (True, True), (0, False), ("1", True)):
+        res = build([{"key": "value", "value": v}])
+        assert res.ok and res.app.resolve("switch", "A").on is on, v
+    assert not build([{"key": "value", "value": "maybe"}]).ok
+    assert not build([{"key": "repeat", "value": "sometimes"}], "timer").ok
+    assert not build([{"key": "max", "value": "lots"}], "dial").ok
+    assert build([{"key": "max", "value": "40"}], "dial").ok

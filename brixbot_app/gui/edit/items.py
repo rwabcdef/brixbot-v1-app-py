@@ -318,7 +318,7 @@ class MessageEdit(_Form):
         out = []
         for i, sc in enumerate(_dicts(self._socket().get("schemas"))):
             consts = "".join(str(c.get("value")) for c in _dicts(sc.get("constantArgs")))
-            label = sc.get("#comment") or (f"'{consts}'" if consts else "")
+            label = sc.get("#name") or (f"'{consts}'" if consts else "")
             out.append((f"{i}: {label}".rstrip(": "), i))
         return out
 
@@ -873,7 +873,9 @@ class SchemaEdit(_Form):
         self.ctx = ctx
         self.orig = dict(sc)
         self.common = common
-        self.comment = self.row("Comment", TextEdit(sc.get("#comment"), "what this message means"))
+        self.name = self.row("Name *", TextEdit(sc.get("#name"), "required, e.g. led on"))
+        self.name.setToolTip("required: names this message on the Link card and in message / binding choices")
+        self.comment = self.row("Comment", TextEdit(sc.get("#comment"), "optional notes"))
         self.ack = self.row("", QCheckBox("send with ack (T frame)"))
         self.ack.setChecked(bool(sc.get("ack")))
         self.ack.toggled.connect(lambda _: self.changed.emit())
@@ -909,12 +911,13 @@ class SchemaEdit(_Form):
         self.preview.setText(f"{arrow}   {common}{consts}{args}")
 
     def summary(self) -> str:
-        c = self.comment.value()
+        c = self.name.value()
         consts = "".join(str(x.get("value")) for x in self.consts.value())
         return c or (f"'{consts}'" if consts else "")
 
     def value(self) -> dict:
-        m = {"#comment": self.comment.value(), "constantArgs": self.consts.value(), "args": self.args.value(),
+        m = {"#name": self.name.value(), "#comment": self.comment.value(),
+             "constantArgs": self.consts.value(), "args": self.args.value(),
              "functions": self.hub_fns.value(), "appFunctions": self.app_fns.value()}
         if self.ack.isChecked():
             m["ack"] = True

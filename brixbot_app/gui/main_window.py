@@ -25,7 +25,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QGuiApplication, QKeySequence
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDockWidget, QFileDialog, QFormLayout, QGroupBox,
-    QHBoxLayout, QLabel, QMainWindow, QMenu, QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QSplitter,
+    QHBoxLayout, QLabel, QMainWindow, QMenu, QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QSplitter, QStackedWidget,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -43,6 +43,7 @@ from ..serlink import Frame, Link
 from .app_widgets import make_view
 from .bridge import Bridge
 from .cards import Card, Column
+from .dashboard import Dashboard
 from .edit.fields import EditCtx
 from .edit.panel import EditorPanel
 
@@ -182,6 +183,13 @@ class MainWindow(QMainWindow):
         self.btn_stop.clicked.connect(self.action_stop)
         rl.addWidget(self.btn_run)
         rl.addWidget(self.btn_stop)
+        self.chk_dashboard = QCheckBox("go to dashboard")
+        self.chk_dashboard.setToolTip("on Run, show only the app's components")
+        self.btn_view = QPushButton("Dashboard")
+        self.btn_view.setToolTip("switch between the dashboard and the editor view while running")
+        self.btn_view.clicked.connect(lambda: self.show_dashboard(not self.dashboard_shown))
+        rl.addWidget(self.chk_dashboard)
+        rl.addWidget(self.btn_view)
         top.addWidget(run)
         top.addStretch(1)
         root.addLayout(top)
@@ -202,7 +210,11 @@ class MainWindow(QMainWindow):
             sa.setFrameShape(QScrollArea.Shape.NoFrame)
             colsl.addWidget(sa, 1)
         self._build_add_menus()
-        split.addWidget(cols)
+        self.dashboard = Dashboard()
+        self.body = QStackedWidget()
+        self.body.addWidget(cols)               # 0: Hub / Link / App columns
+        self.body.addWidget(self.dashboard)     # 1: dashboard (while running)
+        split.addWidget(self.body)
 
         logw = QWidget()
         ll = QVBoxLayout(logw)
@@ -325,6 +337,7 @@ class MainWindow(QMainWindow):
         self.btn_load.setEnabled(idle and connected and not running)
         self.btn_run.setEnabled(idle and not running and self.app_program is not None)
         self.btn_stop.setEnabled(idle and running)
+        self.btn_view.setEnabled(running)
         editable = not running
         for col in (self.col_hub, self.col_link, self.col_app):
             col.add_btn.setEnabled(editable)
@@ -989,7 +1002,7 @@ class MainWindow(QMainWindow):
                                              if isinstance(c, dict)))
                 args = "".join(f"&lt;{html.escape(_field_label(f))}&gt;" for f in sc.get("args") or []
                                if isinstance(f, dict))
-                label = sc.get("#comment")
+                label = sc.get("#name")
                 row = f"{arrow}&nbsp;&nbsp; <b>{common}{consts}{args}</b>"
                 card.add_row(f"{row}<br><i>{html.escape(label)}</i>" if label else row, rich=True)
             self.col_link.add(card)
@@ -1164,6 +1177,8 @@ class MainWindow(QMainWindow):
             self._enable_views(True)
             self.log("running", "ok")
             self._update_buttons()
+            if self.chk_dashboard.isChecked():
+                self.show_dashboard(True)
 
         if self.link.is_open and self.hub_loaded:
             if self.loaded_config is not None and self.loaded_config != self.project.generate():
@@ -1177,6 +1192,7 @@ class MainWindow(QMainWindow):
             def failed(exc):
                 self.log(f"hub would not start: {exc}", "error")
                 self.app_program.stop()
+                self.show_dashboard(False)
                 self._enable_views(False)
                 self._update_buttons()
 
@@ -1188,6 +1204,7 @@ class MainWindow(QMainWindow):
     def action_stop(self) -> None:
         if self.app_program is not None:
             self.app_program.stop()
+        self.show_dashboard(False)
         self._enable_views(False)
         if self.link.is_open and self.hub_running:
             def done(_):
@@ -1197,6 +1214,31 @@ class MainWindow(QMainWindow):
         else:
             self.log("stopped", "ok")
         self._update_buttons()
+
+    # ================================================================ dashboard
+    @property
+    def dashboard_shown(self) -> bool:
+        return self.body.currentIndex() == 1
+
+    def show_dashboard(self, on: bool) -> None:
+        """Dashboard (only the app's components) in place of the columns; only while running.
+        The editor dock is hidden meanwhile and comes back with the editor view."""
+        on = on and self.running and self.app_program is not None
+        if on == self.dashboard_shown:
+            return
+        if on:
+            name = self.project.path.stem if self.project.path else "untitled"
+            self.dashboard.build(self.app_program, self.doc.get(("app", "components")) or [], f"Dashboard - {name}")
+            self._dock_was_visible = self.dock.isVisible()
+            self.dock.hide()
+            self.body.setCurrentIndex(1)
+            self.btn_view.setText("Editor view")
+        else:
+            self.body.setCurrentIndex(0)
+            self.dashboard.clear()
+            if getattr(self, "_dock_was_visible", True):
+                self.dock.show()
+            self.btn_view.setText("Dashboard")
 
     # ================================================================ link <-> app program
     def _send(self, protocol: str, data: str, ack: bool) -> None:
@@ -1240,7 +1282,7 @@ def _field_label(f: dict) -> str:
 
 def _schema_label(sc: dict, si: int) -> str:
     consts = "".join(str(c.get("value")) for c in sc.get("constantArgs") or [] if isinstance(c, dict))
-    return sc.get("#comment") or (f"'{consts}'" if consts else f"schema {si}")
+    return sc.get("#name") or (f"'{consts}'" if consts else f"schema {si}")
 
 
 def _alive(w) -> bool:
