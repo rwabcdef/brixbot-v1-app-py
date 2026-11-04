@@ -10,6 +10,9 @@ can be marked selected, or marked with a verify error.
 A card can hold inset sections in another kind's colour: a component card
 shows its event handlers and control connections in a yellow inset, so they
 sit inside the component they belong to.
+
+The colours come from the theme (theme.py): cards, rows and sections only set
+their objectName and `kind` / `selected` / `error` properties.
 """
 
 from __future__ import annotations
@@ -19,15 +22,7 @@ from typing import Callable
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMenu, QToolButton, QVBoxLayout, QWidget
 
-COLORS = {
-    "component": ("#dae8fc", "#6c8ebf"),
-    "socket": ("#e1d5e7", "#9673a6"),
-    "handler": ("#fff2cc", "#d6b656"),
-    "function": ("#d5e8d4", "#82b366"),
-    "global": ("#f0f0f0", "#999999"),
-}
-SELECT_COLOR = "#1a5fd0"
-ERROR_COLOR = "#d03030"
+from . import theme
 
 Click = Callable[[tuple], None]
 
@@ -51,12 +46,12 @@ class _Clickable:
 
 
 class Row(QLabel, _Clickable):
-    def __init__(self, text: str, border: str, rich: bool = False, path: tuple | None = None):
+    def __init__(self, text: str, kind: str, rich: bool = False, path: tuple | None = None):
         super().__init__(text)
         self.path = path
-        self._border = border
         self.setTextFormat(Qt.TextFormat.RichText if rich else Qt.TextFormat.PlainText)
         self.setObjectName("row")
+        self.setProperty("kind", kind)
         self.setWordWrap(True)
         if path is None:
             self.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -65,9 +60,7 @@ class Row(QLabel, _Clickable):
         self.set_state(False, "")
 
     def set_state(self, selected: bool, error: str) -> None:
-        bg = "background: rgba(26, 95, 208, 0.16);" if selected else ""
-        left = f"border-left: 4px solid {ERROR_COLOR};" if error else ""
-        self.setStyleSheet(f"QLabel#row {{ border-top: 1px solid {self._border}; padding: 3px 6px; {bg} {left} }}")
+        theme.set_state(self, selected=selected, error=bool(error))
         if error:
             self.setToolTip(error)
 
@@ -82,8 +75,8 @@ class Card(QFrame, _Clickable):
         super().__init__()
         self.kind = kind
         self.path = path
-        self._bg, self._border = COLORS[kind]
         self.setObjectName("card")
+        self.setProperty("kind", kind)
         self._tooltip = tooltip
         if tooltip:
             self.setToolTip(tooltip)
@@ -104,19 +97,14 @@ class Card(QFrame, _Clickable):
             self.add_row(r)
 
     def set_state(self, selected: bool, error: str) -> None:
-        color = SELECT_COLOR if selected else (ERROR_COLOR if error else self._border)
-        width = 2 if (selected or error) else 1
-        self.setStyleSheet(
-            f"#card {{ background: {self._bg}; border: {width}px solid {color}; }}"
-            f"#card QLabel {{ color: #111; background: transparent; }}"
-        )
+        theme.set_state(self, selected=selected, error=bool(error))
         tip = "\n\n".join(x for x in (error, self._tooltip) if x)
         self.setToolTip(tip)
 
     def add_row(self, text: str, rich: bool = False, path: tuple | None = None, tooltip: str = "") -> Row:
         """A text row; rich=True renders text as HTML (caller escapes it). A row with a
         path is clickable on its own."""
-        row = Row(text, self._border, rich, path)
+        row = Row(text, self.kind, rich, path)
         if tooltip:
             row.setToolTip(tooltip)
         row.on_click, row.on_menu = self.on_click, self.on_menu
@@ -136,8 +124,8 @@ class Card(QFrame, _Clickable):
 
     def add_widget(self, w: QWidget) -> None:
         holder = QFrame()
-        holder.setObjectName("row")
-        holder.setStyleSheet(f"QFrame#row {{ border-top: 1px solid {self._border}; }}")
+        holder.setObjectName("cardWidget")
+        holder.setProperty("kind", self.kind)
         hl = QVBoxLayout(holder)
         hl.setContentsMargins(6, 4, 6, 6)
         hl.addWidget(w)
@@ -155,10 +143,8 @@ class Section(QFrame):
         super().__init__()
         self.card = card
         self.kind = kind
-        bg, self._border = COLORS[kind]
         self.setObjectName("section")
-        self.setStyleSheet(f"QFrame#section {{ background: {bg}; border: 1px solid {self._border}; "
-                           f"border-radius: 6px; }}")
+        self.setProperty("kind", kind)
         self._lay = QVBoxLayout(self)
         self._lay.setContentsMargins(0, 0, 0, 0)
         self._lay.setSpacing(0)
@@ -168,7 +154,7 @@ class Section(QFrame):
         self.rows: list[Row] = []
 
     def add_row(self, text: str, path: tuple | None = None, tooltip: str = "") -> Row:
-        row = Row(text, self._border, False, path)
+        row = Row(text, self.kind, False, path)
         if tooltip:
             row.setToolTip(tooltip)
         row.on_click, row.on_menu = self.card.on_click, self.card.on_menu
@@ -184,7 +170,6 @@ class Column(QFrame):
     def __init__(self, title: str):
         super().__init__()
         self.setObjectName("column")
-        self.setStyleSheet("#column { border: 1px solid #888; border-radius: 14px; }")
         lay = QVBoxLayout(self)
         lay.setContentsMargins(14, 8, 14, 14)
         lay.setSpacing(12)

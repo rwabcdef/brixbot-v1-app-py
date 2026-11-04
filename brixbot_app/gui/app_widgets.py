@@ -92,6 +92,7 @@ class LedView(_View):
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         self.lamp = QLabel()
+        self.lamp.setObjectName("lamp")
         self.lamp.setFixedSize(22, 22)
         self.state = QLabel()
         lay.addWidget(self.lamp)
@@ -99,8 +100,8 @@ class LedView(_View):
         self.refresh()
 
     def refresh(self) -> None:
-        color = self.model.color if self.model.lit else "#555"
-        self.lamp.setStyleSheet(f"background: {color}; border: 1px solid #222; border-radius: 11px;")
+        # unlit: the theme's lamp colour (QLabel#lamp); lit: the model's colour on top
+        self.lamp.setStyleSheet(f"background: {self.model.color};" if self.model.lit else "")
         self.state.setText(("off", "on", "flashing")[self.model.mode])
 
 

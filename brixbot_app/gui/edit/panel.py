@@ -85,7 +85,7 @@ class EditorPanel(QWidget):
                       "Use the + buttons above the columns to add components, functions, sockets and globals.")
         hint.setWordWrap(True)
         hint.setAlignment(Qt.AlignmentFlag.AlignTop)
-        hint.setStyleSheet("color: #666; padding: 8px;")
+        hint.setObjectName("emptyHint")
         self.scroll.setWidget(hint)
         self._set_json("")
         self._set_dirty(False)

@@ -61,7 +61,7 @@ Pump the Qt events until `busy` is false after each step.
 | `engine/hardware.py`, `brixbot_app/hardware/*.json` | The hub's available components: one file per hardware type, listing each type's slots (pins) in the order the firmware gives them out. `hub_layout()` orders the hub components by slot and pads unused lower pin slots with placeholders. |
 | `brixbot_app/editor/` | No Qt. `document.py` is the project with undo / redo and a dirty flag; every change goes through `Document.apply()`. `templates.py` makes new items with free ids. `controls.py` connects a socket schema to a component command (it makes a `#control` function and the binding) and finds those connections. `refs.py` finds and renames users of functions, components, sockets and globals, and renders pseudo code. |
 | `brixbot_app/hubio.py` | `CONFG` operations: `query`, `load`, `run`, `stop`, `detect`. They block, so call them from worker threads only. |
-| `brixbot_app/gui/` | `main_window.py`, `cards.py` (clickable column cards), `dashboard.py` (the run dashboard of app components), `app_widgets.py` (views of the models) and `bridge.py`. |
+| `brixbot_app/gui/` | `main_window.py`, `cards.py` (clickable column cards), `dashboard.py` (the run dashboard of app components), `app_widgets.py` (views of the models), `theme.py` (the Light and Dark themes) and `bridge.py`. |
 | `brixbot_app/gui/edit/` | The Editor dock. `fields.py` holds the form widgets, `items.py` one editor per item kind (component, function, socket, globals) and `panel.py` the dock with Form / JSON tabs. |
 | `examples/demo_project.json` | Demo project. Its hub part equals `../hub/examples/example_config.json`. |
 
@@ -79,6 +79,10 @@ Pump the Qt events until `busy` is false after each step.
   - Every editor is built from an item's JSON and returns it from `value()`, keeping keys it does not manage. A form round trip must not change an item; `tests/test_gui_editor.py` checks this for every demo item, so extend the demo when adding a format feature.
   - When the config format or `HUB_SPECS` changes, update the matching editor in `gui/edit/items.py` too.
   - Editing is locked while running. Message boxes go through `MainWindow.ask()`, which tests replace.
+- **Themes.** View > Theme picks Light (the original look) or Dark (the ControlHub app's look); the choice is saved in QSettings.
+  - Each theme is one app stylesheet in `gui/theme.py`, so switching theme rebuilds nothing.
+  - Don't hard-code colours in widgets. Give the widget an objectName, and dynamic properties for its state (`theme.set_state()`), and add the rule to `theme._roles()`. Code a stylesheet can't reach reads `theme.current()`.
+  - Font-only stylesheets on widgets are fine.
 - **Errors.** A config error is a `BuildError(code, detail, section, index)`. Codes match the hub's `Err` codes. `Project.verify()` adds the item's `#name` to the message.
 
 ## Project file

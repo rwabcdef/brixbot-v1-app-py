@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...engine.specs import APP_SPECS, HUB_SPECS, SIDE_HUB
+from .. import theme
 from ...engine.variable import TYPE_NAMES
 
 VALUE_TYPES = [t for t in TYPE_NAMES if t not in ("none", "component")]
@@ -131,7 +132,7 @@ def section_label(text: str) -> QLabel:
 def hint(text: str) -> QLabel:
     lbl = QLabel(text)
     lbl.setWordWrap(True)
-    lbl.setStyleSheet("color: #777;")
+    lbl.setObjectName("hint")
     return lbl
 
 
@@ -244,11 +245,11 @@ class ValueEdit(QLineEdit):
                 parse_value(self.text(), self._vtype)
             except ValueError as exc:
                 ok, msg = False, str(exc)
-        self.setStyleSheet("" if ok else "background: #ffdddd;")
+        theme.set_state(self, invalid=not ok)
         self.setToolTip(msg)
 
     def is_valid(self) -> bool:
-        return not self.styleSheet()
+        return not self.property("invalid")
 
     def value(self):
         if self.text() == self._orig_text:
@@ -520,14 +521,13 @@ class _Row(QFrame):
         self.widget = widget
         self.tag = tag
         self.setObjectName("listrow")
-        self.setStyleSheet("#listrow { border: 1px solid #c8c8c8; border-radius: 4px; }")
         lay = QVBoxLayout(self)
         lay.setContentsMargins(4, 2, 4, 4)
         lay.setSpacing(2)
         top = QHBoxLayout()
         top.setSpacing(2)
         self.title = QLabel()
-        self.title.setStyleSheet("color: #555; font-size: 11px;")
+        self.title.setObjectName("listrowTitle")
         top.addWidget(self.title, 1)
         for text, tip, fn in (("▲", "move up", lambda: owner._move(self, -1)),
                               ("▼", "move down", lambda: owner._move(self, 1)),

@@ -22,7 +22,7 @@ import time
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QGuiApplication, QKeySequence
+from PySide6.QtGui import QAction, QActionGroup, QGuiApplication, QKeySequence
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDockWidget, QFileDialog, QFormLayout, QGroupBox,
     QHBoxLayout, QLabel, QMainWindow, QMenu, QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QSplitter, QStackedWidget,
@@ -40,6 +40,7 @@ from ..engine.runtime import Program
 from ..engine.hardware import SLOT_KEY, Hardware, Slot, assign_slots, free_slots, load_hardware
 from ..engine.specs import APP_SPECS, HUB_LIMITS, HUB_SPECS, HUB_UNSUPPORTED, SIDE_APP, SIDE_HUB
 from ..serlink import Frame, Link
+from . import theme
 from .app_widgets import make_view
 from .bridge import Bridge
 from .cards import Card, Column
@@ -87,8 +88,11 @@ class MainWindow(QMainWindow):
         self._errors: dict[tuple, str] = {}
         self._views: list = []
 
+        if not QApplication.instance().styleSheet():
+            theme.apply(theme.current().name)       # the colours of cards etc. live in the stylesheet
         self._build_menu()
         self._build_ui()
+        self._build_theme_menu()
         self._attach(self.doc)
         if project_path:
             self.open_project(project_path)
@@ -254,7 +258,7 @@ class MainWindow(QMainWindow):
 
         self.status = self.statusBar()
         self.verify_label = QLabel()
-        self.verify_label.setStyleSheet("padding: 0 8px;")
+        self.verify_label.setObjectName("verify")
         self.status.addPermanentWidget(self.verify_label)
         self._update_hw_title()
 
@@ -277,6 +281,29 @@ class MainWindow(QMainWindow):
         for menu in (self.col_hub.view_menu, self.menu_view):
             menu.addAction("Available components...", self.show_available)
         self.col_hub.show_view()
+
+    def _build_theme_menu(self) -> None:
+        self.menu_view.addSeparator()
+        tm = self.menu_view.addMenu("&Theme")
+        group = QActionGroup(self)
+        group.setExclusive(True)
+        self.theme_actions: dict[str, QAction] = {}
+        for name in theme.NAMES:
+            a = QAction(theme.TITLES[name], self, checkable=True)
+            a.setChecked(name == theme.current().name)
+            a.triggered.connect(lambda _=False, n=name: self.set_theme(n))
+            group.addAction(a)
+            tm.addAction(a)
+            self.theme_actions[name] = a
+
+    def set_theme(self, name: str) -> None:
+        """Switch theme (View > Theme) and remember it. Only the app stylesheet changes,
+        so nothing is rebuilt and unapplied edits are kept; lines already in the log keep
+        their colours."""
+        t = theme.apply(name)
+        theme.save(t.name)
+        for n, a in self.theme_actions.items():
+            a.setChecked(n == t.name)
 
     def _fill_hub_component_menu(self, menu: QMenu) -> None:
         """One entry per hardware slot ("led D3"); used slots greyed out."""
@@ -303,8 +330,7 @@ class MainWindow(QMainWindow):
 
     # ================================================================ log
     def log(self, msg: str, kind: str = "info") -> None:
-        color = {"info": None, "ok": "#2a9d3a", "error": "#d03030", "warn": "#c07000",
-                 "tx": "#3070c0", "rx": "#8040a0"}.get(kind)
+        color = theme.current().log_color(kind)
         text = f"{time.strftime('%H:%M:%S')}  {html.escape(msg)}"
         self.log_box.appendHtml(f'<span style="color:{color}">{text}</span>' if color else text)
 
@@ -417,12 +443,12 @@ class MainWindow(QMainWindow):
         limit = HUB_LIMITS["config_len"]
         if res.ok:
             self.verify_label.setText(f"✓ verified - hub config {res.hub_config_len} / {limit} chars")
-            self.verify_label.setStyleSheet("padding: 0 8px; color: #2a9d3a;")
+            theme.set_state(self.verify_label, state="ok")
             self.verify_label.setToolTip("")
         else:
             n = len(res.errors)
             self.verify_label.setText(f"✗ {n} error{'s' if n > 1 else ''}: {res.errors[0][:90]}")
-            self.verify_label.setStyleSheet("padding: 0 8px; color: #d03030;")
+            theme.set_state(self.verify_label, state="error")
             self.verify_label.setToolTip("\n\n".join(res.errors))
 
     def _confirm_discard(self, what: str) -> bool:
