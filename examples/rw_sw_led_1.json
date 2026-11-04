@@ -13,6 +13,49 @@
         "id": "B",
         "#name": "led Blue",
         "hwSlot": 1
+      },
+      {
+        "type": "button",
+        "id": "A",
+        "#name": "button A (D7)",
+        "hwSlot": 0,
+        "events": [
+          {
+            "eventId": 1,
+            "functions": [
+              {
+                "functionId": "2",
+                "args": [
+                  {
+                    "outArgIndex": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "eventId": 2,
+            "functions": [
+              {
+                "functionId": "3",
+                "args": [
+                  {
+                    "outArgIndex": 0
+                  },
+                  {
+                    "outArgIndex": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "args": [
+          {
+            "key": "releaseActive",
+            "value": true
+          }
+        ]
       }
     ],
     "functions": [
@@ -51,6 +94,60 @@
           {
             "#name": "led id",
             "type": "char"
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "#name": "button press",
+        "type": "basic",
+        "args": [
+          {
+            "#name": "id",
+            "type": "char"
+          }
+        ],
+        "operationBlock": [
+          {
+            "type": "message",
+            "protocol": "BUTT0",
+            "schema": 0,
+            "args": [
+              {
+                "argIndex": 0
+              }
+            ]
+          }
+        ],
+        "#comment": "Handles all button presses"
+      },
+      {
+        "id": "3",
+        "#name": "button release",
+        "type": "basic",
+        "args": [
+          {
+            "#name": "id",
+            "type": "char"
+          },
+          {
+            "#name": "duration_mS",
+            "type": "uint16"
+          }
+        ],
+        "operationBlock": [
+          {
+            "type": "message",
+            "protocol": "BUTT0",
+            "schema": 1,
+            "args": [
+              {
+                "argIndex": 0
+              },
+              {
+                "argIndex": 1
+              }
+            ]
           }
         ]
       }
@@ -108,6 +205,72 @@
         }
       ],
       "#name": "Leds0"
+    },
+    {
+      "protocol": "BUTT0",
+      "commonArgs": [
+        {
+          "#name": "btn id",
+          "type": "char"
+        }
+      ],
+      "schemas": [
+        {
+          "constantArgs": [
+            {
+              "type": "str10",
+              "value": "P"
+            }
+          ],
+          "args": [],
+          "#name": "Press",
+          "#comment": "sends press",
+          "appFunctions": [
+            {
+              "functionId": "1",
+              "args": [
+                {
+                  "commonArgsIndex": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "constantArgs": [
+            {
+              "type": "char",
+              "value": "R"
+            }
+          ],
+          "args": [
+            {
+              "#name": "duration_mS",
+              "type": "uint16",
+              "minLen": 5,
+              "maxLen": 5,
+              "minValue": 0,
+              "maxValue": 65535
+            }
+          ],
+          "#name": "Release",
+          "appFunctions": [
+            {
+              "functionId": "2",
+              "args": [
+                {
+                  "commonArgsIndex": 0
+                },
+                {
+                  "argsIndex": 0
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "#name": "buttons",
+      "#comment": "All buttons"
     }
   ],
   "app": {
@@ -148,12 +311,54 @@
             "value": "on"
           }
         ]
+      },
+      {
+        "type": "switch",
+        "id": "B",
+        "#name": "switch B",
+        "events": [
+          {
+            "eventId": 1,
+            "functions": [
+              {
+                "functionId": "0",
+                "args": [
+                  {
+                    "outArgIndex": 0
+                  },
+                  {
+                    "outArgIndex": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "args": [
+          {
+            "key": "value",
+            "value": 0
+          },
+          {
+            "key": "onText",
+            "value": "off"
+          },
+          {
+            "key": "offText",
+            "value": "on"
+          }
+        ]
+      },
+      {
+        "type": "switch",
+        "id": "C",
+        "#name": "switch C"
       }
     ],
     "functions": [
       {
         "id": "0",
-        "#name": "switch A change",
+        "#name": "switch change",
         "type": "conditional",
         "args": [
           {
@@ -211,6 +416,99 @@
             }
           ]
         }
+      },
+      {
+        "id": "1",
+        "#name": "on button press",
+        "type": "conditional",
+        "conditionBlock": {
+          "conditionGroups": [
+            {
+              "type": "if",
+              "conditions": [
+                {
+                  "operator": "equal",
+                  "rightFixedVal": {
+                    "type": "char",
+                    "value": "A"
+                  },
+                  "leftVar": {
+                    "argIndex": 0
+                  }
+                }
+              ],
+              "onTrue": [
+                {
+                  "type": "command",
+                  "componentType": "switch",
+                  "commandId": 1,
+                  "inArgs": [
+                    {
+                      "fixedVal": true
+                    }
+                  ],
+                  "componentId": "C"
+                }
+              ]
+            }
+          ]
+        },
+        "args": [
+          {
+            "#name": "butt id",
+            "type": "char"
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "#name": "on button release",
+        "type": "conditional",
+        "conditionBlock": {
+          "conditionGroups": [
+            {
+              "type": "if",
+              "conditions": [
+                {
+                  "operator": "equal",
+                  "rightFixedVal": {
+                    "type": "char",
+                    "value": "A"
+                  },
+                  "leftVar": {
+                    "argIndex": 0
+                  }
+                }
+              ],
+              "onTrue": [
+                {
+                  "type": "command",
+                  "componentType": "switch",
+                  "commandId": 1,
+                  "inArgs": [
+                    {
+                      "fixedVal": {
+                        "type": "bool",
+                        "value": false
+                      }
+                    }
+                  ],
+                  "componentId": "C"
+                }
+              ]
+            }
+          ]
+        },
+        "args": [
+          {
+            "#name": "btn id",
+            "type": "char"
+          },
+          {
+            "#name": "duration_mS",
+            "type": "uint16"
+          }
+        ]
       }
     ]
   }

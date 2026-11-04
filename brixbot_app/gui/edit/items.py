@@ -662,7 +662,8 @@ class ComponentEdit(_Form):
         cmds = controls.control_commands(spec)
         same = self.type.value() == self.orig.get("type") and self.ctx.index is not None
         for cmd in cmds:
-            box = QGroupBox(f"{cmd.name}({', '.join(cmd.in_names)})")
+            args = ", ".join(f"{n}: {controls.arg_type(n, cmd, i)}" for i, n in enumerate(cmd.in_names))
+            box = QGroupBox(f"{cmd.name}({args})")
             bl = QVBoxLayout(box)
             conns = controls.connections(self.ctx.data, self.ctx.side, self.orig, cmd.id) if same else []
             for c in conns:
