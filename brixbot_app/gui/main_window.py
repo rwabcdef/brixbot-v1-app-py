@@ -37,7 +37,7 @@ from ..engine.app_components import now_ms
 from ..engine.builder import BINDING_KEY
 from ..engine.project import HARDWARE_TYPES, Project, VerifyResult
 from ..engine.runtime import Program
-from ..engine.hardware import SLOT_KEY, Hardware, Slot, assign_slots, free_slots, load_hardware
+from ..engine.hardware import SLOT_KEY, Hardware, Slot, assign_slots, free_slots, load_hardware, slot_key
 from ..engine.specs import APP_SPECS, HUB_LIMITS, HUB_SPECS, HUB_UNSUPPORTED, SIDE_APP, SIDE_HUB
 from ..serlink import Frame, Link
 from . import theme
@@ -844,8 +844,9 @@ class MainWindow(QMainWindow):
         for i, sl in assign_slots(hw, comps).items():
             if sl is not None:
                 c = comps[i]
-                users[(sl.type, sl.index)] = c.get("#name") or f"{c.get('type')} {c.get('id')}"
-        return [(sl, users.get((t, sl.index), "")) for t, lst in hw.slots.items() for sl in lst]
+                users[slot_key(sl)] = c.get("#name") or f"{c.get('type')} {c.get('id')}"
+        # a shared pin shows under every type it serves, as used by whoever has it
+        return [(sl, users.get(slot_key(sl), "")) for t, lst in hw.slots.items() for sl in lst]
 
     def show_available(self) -> None:
         hw = self.hardware

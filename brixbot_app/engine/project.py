@@ -12,9 +12,9 @@ functions (run when the hub receives the schema), "appFunctions" are app
 functions (run when the app receives it). Keys starting with '#' are comments.
 
 generate() produces the hub's config string: the hub part plus the sockets,
-without app keys, comments, nulls or empty arrays, minified. The hub
-components are put in the order the hardware gives out its slots (see
-hardware.py; a component's slot is its app-only "hwSlot").
+without app keys, comments, nulls or empty arrays, minified. Each hub
+component with a pin gets the hub key "pin" from its slot (see hardware.py;
+a component's slot is its app-only "hwSlot").
 """
 
 from __future__ import annotations
@@ -137,8 +137,8 @@ class Project:
 
     # ---------------------------------------------------------------- generate
     def hub_components(self) -> tuple[list, list[int | None]]:
-        """The hub components in firmware (slot) order, with placeholders, and for
-        each the index of the project component it is (None = placeholder)."""
+        """The hub components as generated (with "pin" set from their slots), and
+        for each the index of the project component it is."""
         comps = self.hub.get("components")
         return hub_layout(load_hardware(self.hardware), comps if isinstance(comps, list) else [])
 
@@ -159,7 +159,7 @@ class Project:
     # ---------------------------------------------------------------- verify
     def build_hub(self) -> Program:
         cfg = self.hub_config()
-        return build_side(SIDE_HUB, cfg, cfg.get("sockets", []))
+        return build_side(SIDE_HUB, cfg, cfg.get("sockets", []), hw=load_hardware(self.hardware))
 
     def build_app(self) -> Program:
         return build_side(SIDE_APP, self.app, self.sockets, app_factory)

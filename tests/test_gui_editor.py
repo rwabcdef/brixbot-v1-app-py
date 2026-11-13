@@ -173,7 +173,7 @@ def test_hub_slots_controls_and_handler_inset(win, qapp):
     win.add_component("hub", "led", hw.slots["led"][1])
     assert win.doc.get(("hub", "components", 0, "hwSlot")) == 1
     hub = json.loads(win.project.generate())
-    assert [c["id"] for c in hub["components"]] == ["B", "A"]     # placeholder keeps A on D4
+    assert hub["components"] == [{"type": "led", "id": "A", "pin": "D4"}]     # the pin, not a placeholder
 
     # the slot menu greys out the used slot
     menu = QtWidgets.QMenu()

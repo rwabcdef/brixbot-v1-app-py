@@ -1,5 +1,5 @@
 {
-  "#comment": "Components physically available on the hub. Mirrors ../hub/brixbot_hub/Brix_HwConfig.cpp: the firmware gives each type's slots out in this order, one per component as it is declared.",
+  "#comment": "Components physically available on the hub. Mirrors ../hub/brixbot_hub/Brix_HwConfig.cpp: each type's slots are the hub's pin table filtered to that type, in table order (BRIX_HWCONFIG__SHIELD 0, the test breadboard).",
   "id": "brixbot-uno-r4-v1",
   "name": "BrixBot hub v1 (Arduino UNO R4)",
   "components": [

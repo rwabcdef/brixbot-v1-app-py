@@ -18,6 +18,7 @@ from .runtime import (
     AND, CONDITION_OPS, ELIF, ELSE, IF, OR, STATEMENT_OPS, ArgBinding, Command, Component, Condition,
     ConditionGroup, Function, FunctionBinding, Message, Program, SpecComponent, Statement, VariableSource,
 )
+from .hardware import Hardware
 from .sockets import Schema, SocketDef, parse_field
 from .specs import (
     APP_SPECS, COMMAND_RESOLVE, HUB_LIMITS, HUB_SPECS, HUB_UNSUPPORTED, SIDE_APP, SIDE_HUB, VARIADIC,
@@ -127,8 +128,12 @@ def make_fixed(v) -> Variable:
 
 
 class Builder:
-    def __init__(self, side: str, factory: ComponentFactory | None = None):
+    def __init__(self, side: str, factory: ComponentFactory | None = None, hw: Hardware | None = None):
+        """hw: the hub's hardware, to check pins as the firmware does (Brix_HwConfig);
+        without it each pinned type is only checked against its slot count."""
         self.side = side
+        self.hw = hw if side == SIDE_HUB else None
+        self._pins: set[str] = set()
         self.specs = HUB_SPECS if side == SIDE_HUB else APP_SPECS
         self.factory = factory or (lambda spec, cid, cfg: SpecComponent(spec, cid, cfg))
         self.p = Program(side)
@@ -213,10 +218,17 @@ class Builder:
             raise E.BuildError(E.UNSUPPORTED_COMPONENT, f"{self.side} has no component type {tname!r}")
         if self.p.resolve(tname, cid) is not None:
             raise E.BuildError(E.DUPLICATE_ID, f"{tname} {cid}")
-        if spec.slots is not None:
+        pin = o.get("pin") if self.side == SIDE_HUB else None
+        if pin is not None and not isinstance(pin, str):
+            raise E.BuildError(E.BAD_VALUE, f"pin {pin!r}")
+        hw_slots = self.hw.slots.get(tname) if self.hw is not None else None
+        if hw_slots and any(sl.pin for sl in hw_slots):
+            self._take_pin(tname, hw_slots, pin)
+        elif spec.slots is not None or hw_slots is not None:
+            n = len(hw_slots) if hw_slots is not None else spec.slots
             used = self._slots.get(tname, 0)
-            if used >= spec.slots:
-                raise E.BuildError(E.NO_HW_SLOT, f"hub has {spec.slots} {tname} slots")
+            if used >= n:
+                raise E.BuildError(E.NO_HW_SLOT, f"hub has {n} {tname} slots")
             self._slots[tname] = used + 1
         for a in _arr(o.get("args")):
             v = a.get("value") if isinstance(a, dict) else None
@@ -225,6 +237,20 @@ class Builder:
         if self.side == SIDE_HUB and len(self.p.components) >= HUB_LIMITS["components"]:
             raise E.BuildError(E.TOO_MANY, "components")
         self.p.components.append(self.factory(spec, cid, o))
+
+    def _take_pin(self, tname: str, slots: list, pin: str | None) -> None:
+        """HwConfig::takePin: the named pin, else the first free one serving the type."""
+        if pin is not None:
+            sl = next((sl for sl in slots if sl.pin == pin), None)
+            if sl is None:
+                raise E.BuildError(E.NO_HW_SLOT, f"pin {pin!r} cannot be a {tname} on this hub")
+            if pin in self._pins:
+                raise E.BuildError(E.NO_HW_SLOT, f"pin {pin} is already used")
+        else:
+            sl = next((sl for sl in slots if sl.pin not in self._pins), None)
+            if sl is None:
+                raise E.BuildError(E.NO_HW_SLOT, f"no free {tname} pin left on this hub")
+        self._pins.add(sl.pin)
 
     # ================================================================ S: sockets
     def _socket(self, o: dict) -> None:
@@ -509,5 +535,6 @@ class Builder:
                 self.p.handlers[(index, spec.id)] = bindings
 
 
-def build_side(side: str, section: dict, sockets: list, factory: ComponentFactory | None = None) -> Program:
-    return Builder(side, factory).build(section, sockets)
+def build_side(side: str, section: dict, sockets: list, factory: ComponentFactory | None = None,
+               hw: Hardware | None = None) -> Program:
+    return Builder(side, factory, hw).build(section, sockets)

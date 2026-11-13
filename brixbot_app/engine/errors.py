@@ -29,7 +29,7 @@ ERROR_NAMES = {
     JSON: "malformed JSON",
     NO_MEMORY: "out of memory (hub arena / JSON parser)",
     UNSUPPORTED_COMPONENT: "component type not supported",
-    NO_HW_SLOT: "more components of a type than hardware slots",
+    NO_HW_SLOT: "no free hardware pin / slot for a component (or its pin is unknown, taken or wrong type)",
     DUPLICATE_ID: "duplicate id",
     BAD_INDEX: "index out of range",
     BAD_TYPE: "unknown variable type",

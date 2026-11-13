@@ -58,7 +58,7 @@ Pump the Qt events until `busy` is false after each step.
 | `engine/variable.py`, `engine/sockets.py` | Typed values and the payload codec, matching the firmware exactly. |
 | `engine/app_components.py` | App component models: dial, switch, button, led, display, log and timer. |
 | `engine/project.py` | Project file: load and save, `generate()` (the hub string) and `verify()`. |
-| `engine/hardware.py`, `brixbot_app/hardware/*.json` | The hub's available components: one file per hardware type, listing each type's slots (pins) in the order the firmware gives them out. `hub_layout()` orders the hub components by slot and pads unused lower pin slots with placeholders. |
+| `engine/hardware.py`, `brixbot_app/hardware/*.json` | The hub's available components: one file per hardware type (breadboard `brixbot-uno-r4-v1`, shield `brixbot-uno-r4-shield-v1`), listing each type's slots (pins) in the hub's pin-table order. A pin listed under several types is shared between them. `hub_layout()` writes each pinned component's pin into the hub key `pin`. |
 | `brixbot_app/editor/` | No Qt. `document.py` is the project with undo / redo and a dirty flag; every change goes through `Document.apply()`. `templates.py` makes new items with free ids. `controls.py` connects a socket schema to a component command (it makes a `#control` function and the binding) and finds those connections. `refs.py` finds and renames users of functions, components, sockets and globals, and renders pseudo code. |
 | `brixbot_app/hubio.py` | `CONFG` operations: `query`, `load`, `run`, `stop`, `detect`. They block, so call them from worker threads only. |
 | `brixbot_app/gui/` | `main_window.py`, `cards.py` (clickable column cards), `dashboard.py` (the run dashboard of app components), `app_widgets.py` (views of the models), `theme.py` (the Light and Dark themes) and `bridge.py`. |
@@ -93,7 +93,7 @@ Pump the Qt events until `busy` is false after each step.
 - Keys starting with `#` are comments, and `#name` is used as a label.
 - Every socket schema needs a `#name` (an app rule; verify reports a missing one). `Project.load` migrates older files, where a schema's `#comment` becomes its `#name`.
 - A hub component's `hwSlot` (app only) is its slot index within its type in the hardware file. Components without one take the first free slots, in file order.
-- `generate()` builds the hub string from `hub` plus `sockets`. It puts the hub components in slot order with placeholders, strips comments, app-only keys (`appFunctions`, `hwSlot`), nulls and empty arrays, and the hub takes at most 6143 chars. Verify maps component error indices back to the project's own list.
+- `generate()` builds the hub string from `hub` plus `sockets`. It sets each pinned hub component's `pin`, strips comments, app-only keys (`appFunctions`, `hwSlot`), nulls and empty arrays, and the hub takes at most 6143 chars. Verify maps component error indices back to the project's own list.
 
 Projects are edited in the GUI (Editor dock) or as JSON; File > Reload from disk picks up outside changes.
 

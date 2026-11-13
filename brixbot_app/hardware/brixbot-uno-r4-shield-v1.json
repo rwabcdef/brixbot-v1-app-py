@@ -1,0 +1,10 @@
+{
+  "#comment": "BrixBot shield on the UNO R4: 2 x SN754410 motor drivers + nRF24L01 radio (no hub drivers for these yet). Mirrors ../hub/brixbot_hub/Brix_HwConfig.cpp with BRIX_HWCONFIG__SHIELD 1: each type's slots are the hub's pin table filtered to that type, in table order. D0, D1, A3, A0 are shared: each can be a led or a button. A3 and A0 are also the pot pins.",
+  "id": "brixbot-uno-r4-shield-v1",
+  "name": "BrixBot shield v1 (Arduino UNO R4)",
+  "components": [
+    {"type": "led", "slots": [{"pin": "D0"}, {"pin": "D1"}, {"pin": "A3"}, {"pin": "A0"}]},
+    {"type": "button", "slots": [{"pin": "D0"}, {"pin": "D1"}, {"pin": "A3"}, {"pin": "A0"}]},
+    {"type": "timer", "slots": [{}, {}, {}, {}]}
+  ]
+}

@@ -1,14 +1,16 @@
 """Hardware descriptions: the components physically available on each hub type.
 
 One JSON file per hardware type lives in ``brixbot_app/hardware/``. It lists,
-per component type, the slots the firmware hands out in order (a led slot is
-a pin). It mirrors the hub's ``Brix_HwConfig.cpp``.
+per component type, the slots the firmware can give it (a led slot is a pin).
+It mirrors the hub's ``Brix_HwConfig.cpp``: each type's slots are the hub's
+pin table filtered to that type, in table order. A pin listed under several
+types is shared: once one component has it, no other component of any type can.
 
 A project hub component records its slot in the app-only key ``hwSlot`` (an
-index within its type). Components without one take the first free slots in
-file order, so older project files keep their pins. The firmware assigns
-slots by declaration order, so ``hub_layout()`` orders the components by slot
-and pads unused lower pin slots with placeholders.
+index within its type; a hub "pin" name is accepted too). Components without
+one take the first free slots in file order, so older project files keep their
+pins. Generate writes each pinned component's pin into the hub key ``pin``
+(``hub_layout()``), so the firmware does not depend on component order.
 
 No Qt.
 """
@@ -16,14 +18,13 @@ No Qt.
 from __future__ import annotations
 
 import json
-import string
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 
 HW_DIR = Path(__file__).resolve().parent.parent / "hardware"
 SLOT_KEY = "hwSlot"
-_IDS = string.ascii_uppercase + string.digits
+PIN_KEY = "pin"         # hub config key naming a component's pin
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,9 @@ class Hardware:
     id: str
     name: str
     slots: dict[str, list[Slot]] = field(default_factory=dict)
+
+    def slot_by_pin(self, ctype: str, pin) -> Slot | None:
+        return next((s for s in self.slots.get(ctype) or [] if s.pin and s.pin == pin), None)
 
     def slot(self, ctype: str, index) -> Slot | None:
         lst = self.slots.get(ctype) or []
@@ -76,33 +80,38 @@ def load_hardware(hw_id: str) -> Hardware | None:
     return _all().get(hw_id)
 
 
+def slot_key(s: Slot) -> tuple:
+    """What a slot occupies: its pin (shared by every type listing it), else its index."""
+    return ("pin", s.pin) if s.pin else (s.type, s.index)
+
+
 def assign_slots(hw: Hardware | None, components: list) -> dict[int, Slot | None]:
     """{component index: slot} for the components of types the hardware has.
-    An explicit, valid, unused hwSlot wins; the rest take the first free slots
-    in file order (None when there is none left, or the hwSlot is bad)."""
+    An explicit (hwSlot, else hub "pin"), valid, unused slot wins; the rest take
+    the first free slots in file order (None when there is none left, or the
+    explicit slot is bad)."""
     out: dict[int, Slot | None] = {}
     if hw is None:
         return out
-    used: dict[str, set[int]] = {}
+    used: set[tuple] = set()
     rest: list[tuple[int, str]] = []
     for i, c in enumerate(components):
         if not isinstance(c, dict) or c.get("type") not in hw.slots:
             continue
         t = c["type"]
-        if SLOT_KEY in c:
-            s = hw.slot(t, c[SLOT_KEY])
-            if s is not None and s.index not in used.setdefault(t, set()):
-                used[t].add(s.index)
+        if SLOT_KEY in c or PIN_KEY in c:
+            s = hw.slot(t, c[SLOT_KEY]) if SLOT_KEY in c else hw.slot_by_pin(t, c[PIN_KEY])
+            if s is not None and slot_key(s) not in used:
+                used.add(slot_key(s))
                 out[i] = s
             else:
                 out[i] = None
         else:
             rest.append((i, t))
     for i, t in rest:
-        u = used.setdefault(t, set())
-        s = next((s for s in hw.slots[t] if s.index not in u), None)
+        s = next((s for s in hw.slots[t] if slot_key(s) not in used), None)
         if s is not None:
-            u.add(s.index)
+            used.add(slot_key(s))
         out[i] = s
     return out
 
@@ -111,9 +120,8 @@ def free_slots(hw: Hardware | None, components: list, ctype: str, keep: int | No
     """Slots of a type not used by any component (except component index keep)."""
     if hw is None:
         return []
-    taken = {s.index for i, s in assign_slots(hw, components).items()
-             if s is not None and s.type == ctype and i != keep}
-    return [s for s in hw.slots.get(ctype, []) if s.index not in taken]
+    taken = {slot_key(s) for i, s in assign_slots(hw, components).items() if s is not None and i != keep}
+    return [s for s in hw.slots.get(ctype, []) if slot_key(s) not in taken]
 
 
 def slot_errors(hw: Hardware | None, components: list) -> list[tuple[int, str]]:
@@ -124,42 +132,27 @@ def slot_errors(hw: Hardware | None, components: list) -> list[tuple[int, str]]:
             c = components[i]
             if SLOT_KEY in c:
                 errs.append((i, f"hwSlot {c[SLOT_KEY]!r} is not a free {c.get('type')} slot on this hardware"))
+            elif PIN_KEY in c:
+                errs.append((i, f"pin {c[PIN_KEY]!r} is not a free {c.get('type')} pin on this hardware"))
             else:
                 errs.append((i, f"no free {c.get('type')} slot left on this hardware"))
     return errs
 
 
 def hub_layout(hw: Hardware | None, components: list) -> tuple[list, list[int | None]]:
-    """Components in the order the firmware needs, and for each one the index of
-    the project component it came from (None for a placeholder).
+    """Components as the firmware gets them, and for each one the index of the
+    project component it came from (the same order: the list is index for index).
 
-    Components of a pinned type go in slot order, with placeholders in the unused
-    lower slots; everything else keeps its place after them."""
+    A component with a pinned slot gets the hub key "pin" set to that pin, so the
+    firmware gives it that pin whatever the order. Components without a slot
+    (none free, bad hwSlot) are left as they are; verify reports them."""
     if not isinstance(components, list):
         return components, []
     slots = assign_slots(hw, components)
     out: list = []
-    src: list[int | None] = []
-    placed: set[int] = set()
-    for t, tslots in (hw.slots.items() if hw else ()):
-        if not any(s.pin for s in tslots):
-            continue
-        by_slot = {s.index: i for i, s in slots.items() if s is not None and s.type == t}
-        if not by_slot:
-            continue
-        ids = {c.get("id") for c in components if isinstance(c, dict) and c.get("type") == t}
-        for k in range(max(by_slot) + 1):
-            if k in by_slot:
-                out.append(components[by_slot[k]])
-                src.append(by_slot[k])
-                placed.add(by_slot[k])
-            else:
-                pid = next((ch for ch in _IDS if ch not in ids), "?")
-                ids.add(pid)
-                out.append({"type": t, "id": pid, "#name": f"unused {tslots[k].label}"})
-                src.append(None)
     for i, c in enumerate(components):
-        if i not in placed:
-            out.append(c)
-            src.append(i)
-    return out, src
+        s = slots.get(i)
+        if s is not None and s.pin:
+            c = {**c, PIN_KEY: s.pin}
+        out.append(c)
+    return out, list(range(len(components)))
