@@ -1,10 +1,11 @@
 {
-  "#comment": "Components physically available on the hub. Mirrors ../hub/brixbot_hub/Brix_HwConfig.cpp: each type's slots are the hub's pin table filtered to that type, in table order (BRIX_HWCONFIG__SHIELD 0, the test breadboard).",
+  "#comment": "Components physically available on the test breadboard. Mirrors ../hub/brixbot_hub/Brix_HwConfig.cpp (BRIX_HWCONFIG__SHIELD 0): each type's slots are the hub's pin table filtered to that type, in table order. motor M1 is an L293 H-bridge: EN A4, 1A D2, 2A D3.",
   "id": "brixbot-uno-r4-v1",
   "name": "BrixBot hub v1 (Arduino UNO R4)",
   "components": [
-    {"type": "led", "slots": [{"pin": "D5"}, {"pin": "D4"}, {"pin": "D3"}, {"pin": "D2"}]},
+    {"type": "led", "slots": [{"pin": "D5"}, {"pin": "D4"}]},
     {"type": "button", "slots": [{"pin": "D7"}, {"pin": "D6"}, {"pin": "D8"}]},
-    {"type": "timer", "slots": [{}, {}, {}, {}]}
+    {"type": "timer", "slots": [{}, {}, {}, {}]},
+    {"type": "motor", "slots": [{"pin": "M1"}]}
   ]
 }

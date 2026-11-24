@@ -1,7 +1,7 @@
 """Component type tables: commands and events of every hub and app component.
 
-The hub tables must match the hub firmware (Brix_Led / Brix_Button / Brix_Timer
-COMMANDS / EVENTS); they are used to validate a hub config before it is
+The hub tables must match the hub firmware (Brix_Led / Brix_Button / Brix_Timer /
+Brix_Motor COMMANDS / EVENTS); they are used to validate a hub config before it is
 loaded. The app tables define the PC app's own components.
 """
 
@@ -67,9 +67,18 @@ _TIMER_COMMANDS = (
 )
 _TIMER_EVENTS = (EventSpec(1, "timeout", (CHAR,), ("id",)),)
 
+# Brix_Motor (TC78H611FNG-style): percent 0 - 100, stored while idle and
+# applied on the next setDirection; direction 0 idle, 1 forward, 2 reverse.
+_MOTOR_COMMANDS = (
+    CommandSpec(1, "setPercent", 1, in_names=("percent",), in_types=(UINT8,)),
+    CommandSpec(2, "getPercent", ret_type=UINT8),
+    CommandSpec(3, "setDirection", 1, in_names=("direction",), in_types=(UINT8,)),
+    CommandSpec(4, "getDirection", ret_type=UINT8),
+)
+
 # ------------------------------------------------------------------ hub (firmware v1)
 HUB_SPECS: dict[str, ComponentSpec] = {
-    "led": ComponentSpec("led", _LED_COMMANDS, _LED_EVENTS, (), slots=4),
+    "led": ComponentSpec("led", _LED_COMMANDS, _LED_EVENTS, (), slots=2),
     "button": ComponentSpec(
         "button",
         (CommandSpec(1, "getPressed", ret_type=BOOL),),
@@ -81,9 +90,10 @@ HUB_SPECS: dict[str, ComponentSpec] = {
     ),
     "timer": ComponentSpec("timer", _TIMER_COMMANDS, _TIMER_EVENTS,
                            ("timeout_mS", "repeat", "autoStart"), slots=4),
+    "motor": ComponentSpec("motor", _MOTOR_COMMANDS, (), (), slots=1),
 }
 # known to the config format but without a hub driver yet
-HUB_UNSUPPORTED = ("motor", "pot")
+HUB_UNSUPPORTED = ("pot",)
 
 HUB_LIMITS = {
     "components": 12,

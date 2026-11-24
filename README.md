@@ -3,6 +3,10 @@
 Desktop app for the BrixBot hub: open a project, verify it, load the hub part
 into the hub over USB serial, and run it with live app-side controls.
 
+# to run:
+# from: PS C:\Users\rwabc\Software\Projects\BrixBot\v1\app_py
+.venv\Scripts\python -m brixbot_app
+
 ```
 python -m venv .venv
 .venv\Scripts\python -m pip install -e .[dev]
@@ -30,8 +34,9 @@ python -m venv .venv
   **JSON** tab edits the same item as text. **Apply** (Ctrl+Enter) commits, **Revert** drops the edit.
 * **+ Add** above each column adds components, functions (basic or conditional), globals and sockets.
   **Right click** a card or row to duplicate, move or delete it.
-* The hub's components come from its hardware file (`brixbot_app/hardware/<hardware>.json`): each led
-  or button is a pin slot (leds D5, D4, D3, D2; buttons D7, D6, D8; 4 timers). **Hub > + Add >
+* The hub's components come from its hardware file (`brixbot_app/hardware/<hardware>.json`): each led,
+  button or motor is a slot (test board: leds D5, D4; buttons D7, D6, D8; motor M1 = L293 on A4 / D2 /
+  D3; 4 timers). **Hub > + Add >
   Component** lists the slots and greys out the ones in use; **View > Available components** (above
   the Hub column, or the View menu) shows every slot and what uses it. A component's slot is saved as
   `hwSlot` (app only); the editor's **Pin / slot** field changes it.

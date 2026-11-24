@@ -18,30 +18,31 @@ def test_hardware_file_matches_specs():
     assert set(HW.slots) == set(HUB_SPECS)
     for t, spec in HUB_SPECS.items():
         assert len(HW.slots[t]) == spec.slots, t
-    assert [s.pin for s in HW.slots["led"]] == ["D5", "D4", "D3", "D2"]
+    assert [s.pin for s in HW.slots["led"]] == ["D5", "D4"]
+    assert [s.pin for s in HW.slots["motor"]] == ["M1"]
     assert [s.pin for s in HW.slots["button"]] == ["D7", "D6", "D8"]
 
 
 def test_slots_explicit_and_first_free():
-    comps = [{"type": "led", "id": "A", "hwSlot": 2}, {"type": "led", "id": "B"}, {"type": "led", "id": "C"},
+    comps = [{"type": "led", "id": "A", "hwSlot": 1}, {"type": "led", "id": "B"}, {"type": "led", "id": "C"},
              {"type": "timer", "id": "A"}]
-    got = {i: s.pin for i, s in assign_slots(HW, comps).items() if s.pin}
-    assert got == {0: "D3", 1: "D5", 2: "D4"}
-    assert [s.pin for s in free_slots(HW, comps, "led")] == ["D2"]
-    assert [s.pin for s in free_slots(HW, comps, "led", keep=0)] == ["D3", "D2"]
+    got = {i: (s.pin if s else None) for i, s in assign_slots(HW, comps).items() if s is None or s.pin}
+    assert got == {0: "D4", 1: "D5", 2: None}
+    assert free_slots(HW, comps, "led") == []
+    assert [s.pin for s in free_slots(HW, comps, "led", keep=0)] == ["D4"]
 
 
 def test_layout_keeps_order_and_sets_pins():
-    comps = [{"type": "timer", "id": "A"}, {"type": "led", "id": "A", "hwSlot": 2},
+    comps = [{"type": "timer", "id": "A"}, {"type": "led", "id": "A", "hwSlot": 1},
              {"type": "button", "id": "A", "hwSlot": 1}]
     out, src = hub_layout(HW, comps)
-    assert out == [{"type": "timer", "id": "A"}, {"type": "led", "id": "A", "hwSlot": 2, "pin": "D3"},
+    assert out == [{"type": "timer", "id": "A"}, {"type": "led", "id": "A", "hwSlot": 1, "pin": "D4"},
                    {"type": "button", "id": "A", "hwSlot": 1, "pin": "D6"}]
     assert src == [0, 1, 2]
     p = Project({"hardware": DEFAULT_HARDWARE, "hub": {"components": comps}, "sockets": [], "app": {}})
     hub = json.loads(p.generate())
     assert "hwSlot" not in p.generate()
-    assert [c.get("pin") for c in hub["components"]] == [None, "D3", "D6"]
+    assert [c.get("pin") for c in hub["components"]] == [None, "D4", "D6"]
     assert p.verify().ok
 
 
@@ -49,27 +50,27 @@ SHIELD = load_hardware("brixbot-uno-r4-shield-v1")
 
 
 def test_shield_pins_are_shared_between_types():
-    assert [s.pin for s in SHIELD.slots["led"]] == ["D0", "D1", "A3", "A0"]
-    assert [s.pin for s in SHIELD.slots["button"]] == ["D0", "D1", "A3", "A0"]
-    comps = [{"type": "led", "id": "A", "hwSlot": 2},             # A3
-             {"type": "button", "id": "A"},                       # first free: D0
-             {"type": "button", "id": "B", "pin": "A3"}]          # taken by the led
+    assert [s.pin for s in SHIELD.slots["led"]] == ["A3", "A0"]
+    assert [s.pin for s in SHIELD.slots["button"]] == ["A3", "A0"]
+    comps = [{"type": "led", "id": "A", "hwSlot": 1},             # A0
+             {"type": "button", "id": "A"},                       # first free: A3
+             {"type": "button", "id": "B", "pin": "A0"}]          # taken by the led
     got = {i: (s.pin if s else None) for i, s in assign_slots(SHIELD, comps).items()}
-    assert got == {0: "A3", 1: "D0", 2: None}
-    assert [s.pin for s in free_slots(SHIELD, comps, "led")] == ["D1", "A0"]
+    assert got == {0: "A0", 1: "A3", 2: None}
+    assert free_slots(SHIELD, comps, "led") == []
+    assert [s.pin for s in free_slots(SHIELD, comps, "led", keep=0)] == ["A0"]
     assert [i for i, _ in slot_errors(SHIELD, comps)] == [2]
 
 
 def test_shield_build_checks_pins_like_the_firmware():
     def verify(comps):
         return Project({"hardware": SHIELD.id, "hub": {"components": comps}, "sockets": [], "app": {}}).verify()
-    four = [{"type": "button", "id": "A"}, {"type": "button", "id": "B"},
-            {"type": "button", "id": "C"}, {"type": "led", "id": "A"}]
-    assert verify(four).ok                                       # 4 shared pins, any mix
-    assert not verify(four + [{"type": "led", "id": "B"}]).ok    # a fifth has no pin
+    two = [{"type": "button", "id": "A"}, {"type": "led", "id": "A"}]
+    assert verify(two).ok                                        # 2 shared pins, any mix
+    assert not verify(two + [{"type": "led", "id": "B"}]).ok     # a third has no pin
     res = verify([{"type": "led", "id": "A", "hwSlot": 0}])
     assert res.ok and json.loads(Project({"hardware": SHIELD.id, "hub": {"components": [
-        {"type": "led", "id": "A", "hwSlot": 0}]}, "sockets": [], "app": {}}).generate())["components"][0]["pin"] == "D0"
+        {"type": "led", "id": "A", "hwSlot": 0}]}, "sockets": [], "app": {}}).generate())["components"][0]["pin"] == "A3"
 
 
 def test_builder_pin_rules():
@@ -80,13 +81,14 @@ def test_builder_pin_rules():
         except E.BuildError as exc:
             return exc.code
         return None
-    assert err([{"type": "led", "id": "A", "pin": "A0"}, {"type": "button", "id": "A", "pin": "D1"}]) is None
+    assert err([{"type": "led", "id": "A", "pin": "A0"}, {"type": "button", "id": "A", "pin": "A3"}]) is None
+    assert err([{"type": "button", "id": "A", "pin": "D1"}]) == E.NO_HW_SLOT       # overload line
     assert err([{"type": "led", "id": "A", "pin": "A0"}, {"type": "button", "id": "A", "pin": "A0"}]) == E.NO_HW_SLOT
     assert err([{"type": "led", "id": "A", "pin": "D9"}]) == E.NO_HW_SLOT          # not a spare pin
     assert err([{"type": "led", "id": "A", "pin": "D7"}], HW) == E.NO_HW_SLOT      # breadboard D7 is a button
     assert err([{"type": "led", "id": "A", "pin": 5}]) == E.BAD_VALUE
-    assert err([{"type": "led", "id": c} for c in "ABCD"], HW) is None
-    assert err([{"type": "led", "id": c} for c in "ABCDE"], HW) == E.NO_HW_SLOT
+    assert err([{"type": "led", "id": c} for c in "AB"], HW) is None
+    assert err([{"type": "led", "id": c} for c in "ABC"], HW) == E.NO_HW_SLOT
 
 
 def test_verify_index_points_at_project_component():
@@ -103,7 +105,7 @@ def test_slot_errors():
     comps = [{"type": "led", "id": "A", "hwSlot": 0}, {"type": "led", "id": "B", "hwSlot": 0},
              {"type": "led", "id": "C", "hwSlot": 7}]
     res = Project({"hardware": DEFAULT_HARDWARE, "hub": {"components": comps}, "sockets": [], "app": {}}).verify()
-    bad = sorted(exc.index for _, exc in res.issues if exc.code == E.NO_HW_SLOT)
+    bad = sorted({exc.index for _, exc in res.issues if exc.code == E.NO_HW_SLOT})
     assert bad == [1, 2]
 
 
@@ -166,3 +168,33 @@ def test_control_arg_types_follow_the_command():
     data["hub"]["components"].append(tm)
     controls.connect(data, "hub", tm, HUB_SPECS["timer"].command(3))
     assert data["sockets"][1]["schemas"][0]["args"][0]["type"] == "uint16"
+
+
+def test_motor_slots_and_pins():
+    from brixbot_app.engine.builder import build_side
+    def err(comps, hw):
+        try:
+            build_side("hub", {"components": comps}, [], hw=hw)
+        except E.BuildError as exc:
+            return exc.code
+        return None
+    assert err([{"type": "motor", "id": "A", "pin": "M1"}], HW) is None
+    assert err([{"type": "motor", "id": "A"}, {"type": "motor", "id": "B"}], HW) == E.NO_HW_SLOT   # one L293 bridge
+    assert err([{"type": "motor", "id": "A", "pin": "M2"}], HW) == E.NO_HW_SLOT
+    assert err([{"type": "motor", "id": c} for c in "ABCD"], SHIELD) is None
+    assert err([{"type": "motor", "id": "A", "pin": "M3"}, {"type": "motor", "id": "B", "pin": "M3"}], SHIELD) == E.NO_HW_SLOT
+    p = Project({"hardware": DEFAULT_HARDWARE, "hub": {"components": [{"type": "motor", "id": "A", "hwSlot": 0}]},
+                 "sockets": [], "app": {}})
+    assert json.loads(p.generate())["components"] == [{"type": "motor", "id": "A", "pin": "M1"}]
+    assert p.verify().ok
+
+
+def test_motor_controls():
+    assert [c.name for c in controls.control_commands(HUB_SPECS["motor"])] == ["setPercent", "setDirection"]
+    data = templates.new_project()
+    m = {"type": "motor", "id": "A", "hwSlot": 0}
+    data["hub"]["components"].append(m)
+    controls.connect(data, "hub", m, HUB_SPECS["motor"].command(1))       # setPercent(uint8)
+    controls.connect(data, "hub", m, HUB_SPECS["motor"].command(3), socket=0)   # setDirection(uint8)
+    assert [sc["args"][0]["type"] for sc in data["sockets"][0]["schemas"]] == ["uint8", "uint8"]
+    assert Project(data).verify().ok

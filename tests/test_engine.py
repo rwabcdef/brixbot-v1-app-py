@@ -77,8 +77,9 @@ def hub_err(cfg):
 
 
 def test_hub_errors_match_firmware():
-    assert hub_err({"components": [{"type": "motor", "id": "A"}]}) == "003C000"
-    assert hub_err({"components": [{"type": "led", "id": c} for c in "ABCDE"]}) == "004C004"
+    assert hub_err({"components": [{"type": "pot", "id": "A"}]}) == "003C000"
+    assert hub_err({"components": [{"type": "led", "id": c} for c in "ABC"]}) == "004C002"
+    assert hub_err({"components": [{"type": "motor", "id": c} for c in "AB"]}) == "004C001"
     assert hub_err({"functions": [{"id": 0, "operationBlock": [
         {"type": "statement", "leftVar": {"argIndex": 0}, "operator": "equals", "rightFixedVal": 1}]}]}) == "006F000"
     assert hub_err({"components": [{"type": "timer", "id": "A",

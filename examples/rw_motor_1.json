@@ -1,0 +1,310 @@
+{
+  "hardware": "brixbot-uno-r4-v1",
+  "hub": {
+    "components": [
+      {
+        "type": "led",
+        "id": "A",
+        "#name": "led A (D5)",
+        "hwSlot": 0
+      },
+      {
+        "type": "motor",
+        "id": "A",
+        "#name": "motor A (M1)",
+        "hwSlot": 0
+      }
+    ],
+    "functions": [
+      {
+        "id": "0",
+        "#name": "led on",
+        "type": "basic",
+        "operationBlock": [
+          {
+            "type": "command",
+            "componentType": "led",
+            "commandId": 1,
+            "componentIdArg": 0
+          }
+        ],
+        "args": [
+          {
+            "#name": "led id",
+            "type": "char"
+          }
+        ]
+      },
+      {
+        "id": "1",
+        "#name": "led off",
+        "type": "basic",
+        "operationBlock": [
+          {
+            "type": "command",
+            "componentType": "led",
+            "commandId": 2,
+            "componentIdArg": 0
+          }
+        ],
+        "args": [
+          {
+            "#name": "led id",
+            "type": "char"
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "#name": "motor set percent",
+        "type": "basic",
+        "operationBlock": [
+          {
+            "type": "command",
+            "componentType": "motor",
+            "commandId": 1,
+            "inArgs": [
+              {
+                "argIndex": 0
+              }
+            ],
+            "componentId": "A"
+          }
+        ],
+        "args": [
+          {
+            "#name": "percent",
+            "type": "uint8"
+          }
+        ]
+      }
+    ]
+  },
+  "sockets": [
+    {
+      "protocol": "LEDS0",
+      "commonArgs": [
+        {
+          "#name": "led id",
+          "type": "char"
+        }
+      ],
+      "schemas": [
+        {
+          "constantArgs": [
+            {
+              "type": "char",
+              "value": "1",
+              "#name": "on cmd"
+            }
+          ],
+          "args": [],
+          "#name": "led on",
+          "functions": [
+            {
+              "functionId": "0",
+              "args": [
+                {
+                  "commonArgsIndex": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "constantArgs": [
+            {
+              "type": "char",
+              "value": "0",
+              "#name": "off cmd"
+            }
+          ],
+          "args": [],
+          "#name": "led off",
+          "functions": [
+            {
+              "functionId": "1",
+              "args": [
+                {
+                  "commonArgsIndex": 0
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "#name": "all leds"
+    },
+    {
+      "protocol": "MOTOR",
+      "commonArgs": [],
+      "schemas": [
+        {
+          "constantArgs": [],
+          "args": [
+            {
+              "type": "uint8",
+              "minLen": 3,
+              "maxLen": 3,
+              "minValue": 0,
+              "maxValue": 100
+            }
+          ],
+          "#name": "set percent",
+          "functions": [
+            {
+              "functionId": "2",
+              "args": [
+                {
+                  "argsIndex": 0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "app": {
+    "components": [
+      {
+        "type": "button",
+        "id": "A",
+        "#name": "button A",
+        "events": [
+          {
+            "eventId": 1,
+            "functions": [
+              {
+                "functionId": "0",
+                "args": [
+                  {
+                    "outArgIndex": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "eventId": 2,
+            "functions": [
+              {
+                "functionId": "1",
+                "args": [
+                  {
+                    "outArgIndex": 0
+                  },
+                  {
+                    "outArgIndex": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "dial",
+        "id": "A",
+        "#name": "dial A",
+        "events": [
+          {
+            "eventId": 1,
+            "functions": [
+              {
+                "functionId": "2",
+                "args": [
+                  {
+                    "outArgIndex": 0
+                  },
+                  {
+                    "outArgIndex": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "id": "0",
+        "#name": "button A press",
+        "type": "basic",
+        "args": [
+          {
+            "#name": "id",
+            "type": "char"
+          }
+        ],
+        "operationBlock": [
+          {
+            "type": "message",
+            "protocol": "LEDS0",
+            "schema": 0,
+            "args": [
+              {
+                "argIndex": 0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "1",
+        "#name": "button A release",
+        "type": "basic",
+        "args": [
+          {
+            "#name": "id",
+            "type": "char"
+          },
+          {
+            "#name": "duration_mS",
+            "type": "uint16"
+          }
+        ],
+        "operationBlock": [
+          {
+            "type": "message",
+            "protocol": "LEDS0",
+            "schema": 1,
+            "args": [
+              {
+                "argIndex": 0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "#name": "dial A change",
+        "type": "basic",
+        "args": [
+          {
+            "#name": "id",
+            "type": "char"
+          },
+          {
+            "#name": "value",
+            "type": "uint8"
+          }
+        ],
+        "operationBlock": [
+          {
+            "type": "message",
+            "protocol": "MOTOR",
+            "schema": 0,
+            "args": [
+              {
+                "argIndex": 1
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
