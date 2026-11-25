@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
-    QDial, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget,
+    QButtonGroup, QDial, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QRadioButton, QVBoxLayout,
+    QWidget,
 )
 
 from ..engine import app_components as M
@@ -73,6 +74,34 @@ class SwitchView(_View):
         self.btn.setChecked(self.model.on)
         self.btn.blockSignals(False)
         self.btn.setText(self.model.on_text if self.model.on else self.model.off_text)
+
+
+class RadioView(_View):
+    """One radio button per model button; up to 4 in a row, more in a column."""
+
+    def __init__(self, model: M.RadioModel):
+        super().__init__(model)
+        lay = QHBoxLayout(self) if len(model.buttons) <= 4 else QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        self.group = QButtonGroup(self)
+        self.group.setExclusive(True)
+        self.radios: dict[str, QRadioButton] = {}
+        for value, text in model.buttons:
+            rb = QRadioButton(text)
+            rb.setToolTip(f"value {value!r}")
+            rb.toggled.connect(lambda on, v=value: on and model.user_select(v))
+            self.group.addButton(rb)
+            self.radios[value] = rb
+            lay.addWidget(rb)
+        lay.addStretch(1)
+        self.refresh()
+
+    def refresh(self) -> None:
+        rb = self.radios.get(self.model.value)
+        if rb is not None and not rb.isChecked():
+            rb.blockSignals(True)
+            rb.setChecked(True)
+            rb.blockSignals(False)
 
 
 class ButtonView(_View):
@@ -164,6 +193,7 @@ VIEWS = {
     "display": DisplayView,
     "log": LogView,
     "timer": TimerView,
+    "radio": RadioView,
 }
 
 

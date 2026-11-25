@@ -81,8 +81,13 @@ One JSON file holds both sides (see `examples/demo_project.json`):
   (run when the hub receives that message) and `appFunctions` binds **app**
   functions (run when the app receives it).
 * `app` uses the same format for the app's own components: `dial`, `switch`,
-  `button`, `led`, `display`, `log`, `timer` (commands and events in
+  `radio`, `button`, `led`, `display`, `log`, `timer` (commands and events in
   `brixbot_app/engine/specs.py`).
+* `radio` is a radio button group. Its `buttons` setting lists each button as a
+  one-character value and its text, e.g. `F=forward, I=idle, R=reverse`; the
+  group's value is the chosen button's char (`value` sets the one chosen at start,
+  default the first). Choosing a button raises `change(id, value)`; `set(value)`
+  chooses one from a function and `get` reads it.
 * Keys starting with `#` are comments (`#name` is used as a label).
 
 **Generate** builds the hub string from `hub` + `sockets`, dropping comments,

@@ -81,99 +81,26 @@
       {
         "id": "3",
         "#name": "motor set direction",
-        "type": "conditional",
-        "conditionBlock": {
-          "conditionGroups": [
-            {
-              "type": "if",
-              "conditions": [
-                {
-                  "operator": "equal",
-                  "leftVar": {
-                    "argIndex": 0
-                  },
-                  "rightFixedVal": {
-                    "type": "char",
-                    "value": "F"
-                  }
-                }
-              ],
-              "onTrue": [
-                {
-                  "type": "command",
-                  "componentType": "motor",
-                  "commandId": 3,
-                  "componentId": "A",
-                  "inArgs": [
-                    {
-                      "fixedVal": {
-                        "type": "uint8",
-                        "value": 1
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "elif",
-              "conditions": [
-                {
-                  "operator": "equal",
-                  "leftVar": {
-                    "argIndex": 0
-                  },
-                  "rightFixedVal": {
-                    "type": "char",
-                    "value": "R"
-                  }
-                }
-              ],
-              "onTrue": [
-                {
-                  "type": "command",
-                  "componentType": "motor",
-                  "commandId": 3,
-                  "componentId": "A",
-                  "inArgs": [
-                    {
-                      "fixedVal": {
-                        "type": "uint8",
-                        "value": 2
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "else",
-              "onTrue": [
-                {
-                  "type": "command",
-                  "componentType": "motor",
-                  "commandId": 3,
-                  "componentId": "A",
-                  "inArgs": [
-                    {
-                      "fixedVal": {
-                        "type": "uint8",
-                        "value": 0
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
+        "type": "basic",
         "args": [
           {
             "#name": "direction",
             "type": "char"
           }
         ],
-        "#comment": "F forward, R reverse, anything else (D) idle"
+        "operationBlock": [
+          {
+            "type": "command",
+            "componentType": "motor",
+            "commandId": 3,
+            "inArgs": [
+              {
+                "argIndex": 0
+              }
+            ],
+            "componentId": "A"
+          }
+        ]
       }
     ]
   },
@@ -519,7 +446,7 @@
                     {
                       "fixedVal": {
                         "type": "char",
-                        "value": "D"
+                        "value": "I"
                       }
                     }
                   ]

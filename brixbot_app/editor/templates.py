@@ -39,7 +39,15 @@ def new_component(side: str, ctype: str, components: list, slot: Slot | None = N
     c = {"type": ctype, "id": cid, "#name": f"{ctype} {cid}" + (f" ({slot.pin})" if slot and slot.pin else "")}
     if slot is not None:
         c[SLOT_KEY] = slot.index
+    if side != SIDE_HUB and ctype in NEW_ARGS:
+        c["args"] = [dict(a) for a in NEW_ARGS[ctype]]
     return c
+
+
+# Settings a new app component starts with (where the defaults are not enough).
+NEW_ARGS = {
+    "radio": [{"key": "buttons", "value": "F=forward, I=idle, R=reverse"}],
+}
 
 
 def next_function_id(functions: list):

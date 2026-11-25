@@ -1,0 +1,223 @@
+{
+  "hardware": "brixbot-uno-r4-v1",
+  "hub": {
+    "components": [
+      {
+        "type": "motor",
+        "id": "A",
+        "#name": "motor A (M1)",
+        "hwSlot": 0
+      }
+    ],
+    "functions": [
+      {
+        "id": "0",
+        "#name": "set direction A",
+        "type": "basic",
+        "args": [
+          {
+            "#name": "direction",
+            "type": "char"
+          }
+        ],
+        "operationBlock": [
+          {
+            "type": "command",
+            "componentType": "motor",
+            "commandId": 3,
+            "inArgs": [
+              {
+                "argIndex": 0
+              }
+            ],
+            "componentId": "A"
+          }
+        ]
+      },
+      {
+        "id": "1",
+        "#name": "set percent A",
+        "type": "basic",
+        "operationBlock": [
+          {
+            "type": "command",
+            "componentType": "motor",
+            "commandId": 1,
+            "inArgs": [
+              {
+                "argIndex": 0
+              }
+            ],
+            "componentId": "A"
+          }
+        ],
+        "args": [
+          {
+            "#name": "percent",
+            "type": "uint8"
+          }
+        ]
+      }
+    ]
+  },
+  "sockets": [
+    {
+      "protocol": "MOTOR",
+      "commonArgs": [],
+      "schemas": [
+        {
+          "constantArgs": [
+            {
+              "type": "char",
+              "value": "D"
+            }
+          ],
+          "args": [
+            {
+              "#name": "direction",
+              "type": "char"
+            }
+          ],
+          "#name": "direction",
+          "functions": [
+            {
+              "functionId": "0",
+              "args": [
+                {
+                  "argsIndex": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "constantArgs": [
+            {
+              "type": "char",
+              "value": "P"
+            }
+          ],
+          "args": [
+            {
+              "#name": "percent",
+              "type": "uint8",
+              "minLen": 3,
+              "maxLen": 3,
+              "minValue": 0,
+              "maxValue": 100
+            }
+          ],
+          "#name": "percent",
+          "functions": [
+            {
+              "functionId": "1",
+              "args": [
+                {
+                  "argsIndex": 0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "app": {
+    "components": [
+      {
+        "type": "radio",
+        "id": "A",
+        "#name": "radio A",
+        "args": [
+          {
+            "key": "buttons",
+            "value": "F=forward, I=idle, R=reverse"
+          }
+        ],
+        "events": [
+          {
+            "eventId": 1,
+            "functions": [
+              {
+                "functionId": "0",
+                "args": [
+                  {
+                    "outArgIndex": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "dial",
+        "id": "A",
+        "#name": "dial A",
+        "events": [
+          {
+            "eventId": 1,
+            "functions": [
+              {
+                "functionId": "1",
+                "args": [
+                  {
+                    "outArgIndex": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "id": "0",
+        "#name": "radio A change",
+        "type": "basic",
+        "args": [
+          {
+            "#name": "value",
+            "type": "char"
+          }
+        ],
+        "operationBlock": [
+          {
+            "type": "message",
+            "protocol": "MOTOR",
+            "schema": 0,
+            "args": [
+              {
+                "argIndex": 0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "1",
+        "#name": "dial A change",
+        "type": "basic",
+        "args": [
+          {
+            "#name": "value",
+            "type": "uint8"
+          }
+        ],
+        "operationBlock": [
+          {
+            "type": "message",
+            "protocol": "MOTOR",
+            "schema": 1,
+            "args": [
+              {
+                "argIndex": 0
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

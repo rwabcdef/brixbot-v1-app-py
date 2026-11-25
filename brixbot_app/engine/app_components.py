@@ -117,6 +117,67 @@ class SwitchModel(AppComponent):
         self.emit(1, [self.id_var(), Variable(BOOL, self.on)])
 
 
+def parse_radio_buttons(text) -> list[tuple[str, str]]:
+    """'F=forward, I=idle, R=reverse' -> [('F', 'forward'), ...]. Each item is a
+    one-character value, optionally '=' and the button's text (default: the value).
+    Raises BuildError (BAD_VALUE) on a bad or empty list or a repeated value."""
+    if not isinstance(text, str) or not text.strip():
+        raise E.BuildError(E.BAD_VALUE, "buttons: give e.g. F=forward, I=idle, R=reverse")
+    out: list[tuple[str, str]] = []
+    for item in text.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        value, sep, label = item.partition("=")
+        value = value.strip()
+        if len(value) != 1:
+            raise E.BuildError(E.BAD_VALUE, f"buttons: {item!r} - the value before '=' must be one character")
+        if any(v == value for v, _ in out):
+            raise E.BuildError(E.BAD_VALUE, f"buttons: value {value!r} is used twice")
+        out.append((value, label.strip() if sep and label.strip() else value))
+    if not out:
+        raise E.BuildError(E.BAD_VALUE, "buttons: no buttons")
+    return out
+
+
+class RadioModel(AppComponent):
+    """A group of radio buttons; the group's value is the chosen button's char."""
+
+    def __init__(self, spec, cid, cfg):
+        super().__init__(spec, cid, cfg)
+        self.buttons = parse_radio_buttons(self.init_arg("buttons", "A=A, B=B"))
+        values = [v for v, _ in self.buttons]
+        start = self.init_arg("value", values[0])
+        if isinstance(start, int) and not isinstance(start, bool):
+            start = str(start)                  # a digit value, read as a number by the editor
+        if start not in values:
+            raise E.BuildError(E.BAD_VALUE, f"value {start!r}: not one of the buttons ({', '.join(values)})")
+        self.value = start
+
+    def execute(self, cmd: Command) -> int:
+        if cmd.command_id == 1:
+            if not cmd.in_args:
+                return E.BAD_COMMAND
+            a = cmd.in_args[0]
+            v = a.value if a.type == CHAR else chr(a.get_int() & 0xFF)
+            if all(v != b for b, _ in self.buttons):
+                return E.RUNTIME
+            self.value = v
+            self.notify()
+        elif cmd.command_id == 2:
+            cmd.set_ret(self.value, CHAR)
+        else:
+            return E.BAD_COMMAND
+        return E.OK
+
+    def user_select(self, value: str) -> None:
+        if value == self.value or all(value != b for b, _ in self.buttons):
+            return
+        self.value = value
+        self.notify()
+        self.emit(1, [self.id_var(), Variable(CHAR, self.value)])
+
+
 class ButtonModel(AppComponent):
     def __init__(self, spec, cid, cfg):
         super().__init__(spec, cid, cfg)
@@ -295,6 +356,7 @@ MODELS = {
     "display": DisplayModel,
     "log": LogModel,
     "timer": TimerModel,
+    "radio": RadioModel,
 }
 
 

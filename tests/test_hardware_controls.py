@@ -195,6 +195,6 @@ def test_motor_controls():
     m = {"type": "motor", "id": "A", "hwSlot": 0}
     data["hub"]["components"].append(m)
     controls.connect(data, "hub", m, HUB_SPECS["motor"].command(1))       # setPercent(uint8)
-    controls.connect(data, "hub", m, HUB_SPECS["motor"].command(3), socket=0)   # setDirection(uint8)
-    assert [sc["args"][0]["type"] for sc in data["sockets"][0]["schemas"]] == ["uint8", "uint8"]
+    controls.connect(data, "hub", m, HUB_SPECS["motor"].command(3), socket=0)   # setDirection(char)
+    assert [sc["args"][0]["type"] for sc in data["sockets"][0]["schemas"]] == ["uint8", "char"]
     assert Project(data).verify().ok

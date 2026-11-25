@@ -68,12 +68,12 @@ _TIMER_COMMANDS = (
 _TIMER_EVENTS = (EventSpec(1, "timeout", (CHAR,), ("id",)),)
 
 # Brix_Motor (TC78H611FNG-style): percent 0 - 100, stored while idle and
-# applied on the next setDirection; direction 0 idle, 1 forward, 2 reverse.
+# applied on the next setDirection; direction 'I' idle, 'F' forward, 'R' reverse.
 _MOTOR_COMMANDS = (
     CommandSpec(1, "setPercent", 1, in_names=("percent",), in_types=(UINT8,)),
     CommandSpec(2, "getPercent", ret_type=UINT8),
-    CommandSpec(3, "setDirection", 1, in_names=("direction",), in_types=(UINT8,)),
-    CommandSpec(4, "getDirection", ret_type=UINT8),
+    CommandSpec(3, "setDirection", 1, in_names=("direction",), in_types=(CHAR,)),
+    CommandSpec(4, "getDirection", ret_type=CHAR),
 )
 
 # ------------------------------------------------------------------ hub (firmware v1)
@@ -118,6 +118,17 @@ APP_SPECS: dict[str, ComponentSpec] = {
          CommandSpec(2, "get", ret_type=BOOL)),
         (EventSpec(1, "change", (CHAR, BOOL), ("id", "on")),),
         ("value", "onText", "offText"),
+    ),
+    # radio button group: "buttons" = "F=forward, I=idle, R=reverse" (a one-char
+    # value, '=' and the button's text, comma separated); its value is the chosen
+    # button's char. set() picks a button by value (an unknown value is a run-time
+    # error); change is raised by the user only.
+    "radio": ComponentSpec(
+        "radio",
+        (CommandSpec(1, "set", 1, in_names=("value",), in_types=(CHAR,)),
+         CommandSpec(2, "get", ret_type=CHAR)),
+        (EventSpec(1, "change", (CHAR, CHAR), ("id", "value")),),
+        ("buttons", "value"),
     ),
     "button": ComponentSpec(
         "button",
