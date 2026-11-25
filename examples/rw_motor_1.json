@@ -77,6 +77,103 @@
             "type": "uint8"
           }
         ]
+      },
+      {
+        "id": "3",
+        "#name": "motor set direction",
+        "type": "conditional",
+        "conditionBlock": {
+          "conditionGroups": [
+            {
+              "type": "if",
+              "conditions": [
+                {
+                  "operator": "equal",
+                  "leftVar": {
+                    "argIndex": 0
+                  },
+                  "rightFixedVal": {
+                    "type": "char",
+                    "value": "F"
+                  }
+                }
+              ],
+              "onTrue": [
+                {
+                  "type": "command",
+                  "componentType": "motor",
+                  "commandId": 3,
+                  "componentId": "A",
+                  "inArgs": [
+                    {
+                      "fixedVal": {
+                        "type": "uint8",
+                        "value": 1
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "elif",
+              "conditions": [
+                {
+                  "operator": "equal",
+                  "leftVar": {
+                    "argIndex": 0
+                  },
+                  "rightFixedVal": {
+                    "type": "char",
+                    "value": "R"
+                  }
+                }
+              ],
+              "onTrue": [
+                {
+                  "type": "command",
+                  "componentType": "motor",
+                  "commandId": 3,
+                  "componentId": "A",
+                  "inArgs": [
+                    {
+                      "fixedVal": {
+                        "type": "uint8",
+                        "value": 2
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "else",
+              "onTrue": [
+                {
+                  "type": "command",
+                  "componentType": "motor",
+                  "commandId": 3,
+                  "componentId": "A",
+                  "inArgs": [
+                    {
+                      "fixedVal": {
+                        "type": "uint8",
+                        "value": 0
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "args": [
+          {
+            "#name": "direction",
+            "type": "char"
+          }
+        ],
+        "#comment": "F forward, R reverse, anything else (D) idle"
       }
     ]
   },
@@ -143,7 +240,7 @@
           "constantArgs": [],
           "args": [
             {
-              "type": "uint8",
+              "type": "int16",
               "minLen": 3,
               "maxLen": 3,
               "minValue": 0,
@@ -154,6 +251,31 @@
           "functions": [
             {
               "functionId": "2",
+              "args": [
+                {
+                  "argsIndex": 0
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "constantArgs": [
+            {
+              "type": "char",
+              "value": "D"
+            }
+          ],
+          "args": [
+            {
+              "#name": "direction",
+              "type": "char"
+            }
+          ],
+          "#name": "set direction",
+          "functions": [
+            {
+              "functionId": "3",
               "args": [
                 {
                   "argsIndex": 0
@@ -213,6 +335,29 @@
             "functions": [
               {
                 "functionId": "2",
+                "args": [
+                  {
+                    "outArgIndex": 0
+                  },
+                  {
+                    "outArgIndex": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "switch",
+        "id": "A",
+        "#name": "direction switch",
+        "events": [
+          {
+            "eventId": 1,
+            "functions": [
+              {
+                "functionId": "3",
                 "args": [
                   {
                     "outArgIndex": 0
@@ -304,6 +449,85 @@
             ]
           }
         ]
+      },
+      {
+        "id": "3",
+        "#name": "direction switch change",
+        "type": "conditional",
+        "args": [
+          {
+            "#name": "id",
+            "type": "char"
+          },
+          {
+            "#name": "on",
+            "type": "bool"
+          }
+        ],
+        "conditionBlock": {
+          "conditionGroups": [
+            {
+              "type": "if",
+              "conditions": [
+                {
+                  "operator": "equal",
+                  "rightFixedVal": {
+                    "type": "bool",
+                    "value": true
+                  },
+                  "leftVar": {
+                    "argIndex": 1
+                  }
+                }
+              ],
+              "onTrue": [
+                {
+                  "type": "message",
+                  "protocol": "MOTOR",
+                  "schema": 1,
+                  "args": [
+                    {
+                      "fixedVal": {
+                        "type": "char",
+                        "value": "F"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "elif",
+              "conditions": [
+                {
+                  "operator": "equal",
+                  "rightFixedVal": {
+                    "type": "bool",
+                    "value": false
+                  },
+                  "leftVar": {
+                    "argIndex": 1
+                  }
+                }
+              ],
+              "onTrue": [
+                {
+                  "type": "message",
+                  "protocol": "MOTOR",
+                  "schema": 1,
+                  "args": [
+                    {
+                      "fixedVal": {
+                        "type": "char",
+                        "value": "D"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
       }
     ]
   }
